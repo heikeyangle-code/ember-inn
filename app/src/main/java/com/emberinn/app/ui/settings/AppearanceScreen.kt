@@ -235,6 +235,51 @@ fun AppearanceScreen(
                     }
                 }
 
+                // ---------------- 壳层个性化（第 15 阶段：密度/动效/首页形态，只影响 App Shell） ----------------
+                item {
+                    SectionTitle("个性化")
+                    PreferenceGroup {
+                        GroupLabel("界面密度")
+                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                            listOf("comfortable" to "舒适", "compact" to "紧凑").forEach { (v, label) ->
+                                EmberChip(
+                                    label = label,
+                                    selected = AppearancePrefs.shellDensity(context) == v,
+                                    onClick = { AppearancePrefs.saveShellDensity(context, v) },
+                                )
+                            }
+                        }
+                    }
+                }
+                item {
+                    PreferenceGroup {
+                        GroupLabel("动效")
+                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                            listOf("full" to "完整", "reduced" to "减弱").forEach { (v, label) ->
+                                EmberChip(
+                                    label = label,
+                                    selected = AppearancePrefs.motionLevel(context) == v,
+                                    onClick = { AppearancePrefs.saveMotionLevel(context, v) },
+                                )
+                            }
+                        }
+                    }
+                }
+                item {
+                    PreferenceGroup {
+                        GroupLabel("首页形态")
+                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                            listOf("editorial" to "编辑", "minimal" to "极简").forEach { (v, label) ->
+                                EmberChip(
+                                    label = label,
+                                    selected = AppearancePrefs.homeStyle(context) == v,
+                                    onClick = { AppearancePrefs.saveHomeStyle(context, v) },
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // ---------------- 官方主题字段微调（=官方 User Settings 面板，写回主题 JSON） ----------------
                 item {
                     ThemeTuneGroup()

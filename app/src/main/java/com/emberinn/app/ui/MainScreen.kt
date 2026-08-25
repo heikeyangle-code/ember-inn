@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -33,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -100,6 +100,44 @@ fun MainScreen() {
         }
     }
 
+    // 全域搜索浮层（三档布局共用入口）：entries 由 HomeViewModel 统一检索（含模糊搜索）
+    val searchOverlay: @Composable () -> Unit = {
+        if (showGlobalSearch) {
+            com.emberinn.app.ui.design.components.GlobalSearchPanel(
+                entriesProvider = { q ->
+                    val r = homeVm.search(q)
+                    buildList {
+                        r.characters.forEach { ch ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(ch.name, "角色卡", FaIcons.Mask, "角色") {
+                                openDetailId = ch.id
+                                editingCharacter = false
+                            })
+                        }
+                        r.sessions.forEach { se ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(se.name, "对话", FaIcons.Comments, "对话") {
+                                openSession(se.id)
+                                openName = se.name
+                            })
+                        }
+                        r.worldInfo.forEach { wi ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(wi.key, wi.characterName, FaIcons.BookOpen, "世界书") {
+                                settingsDeepLink = "worldinfo"
+                                selectedDest = 3
+                            })
+                        }
+                        r.settings.forEach { st ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(st.label, st.description, FaIcons.Gear, "设置") {
+                                if (st.route != null) settingsDeepLink = st.route
+                                selectedDest = 3
+                            })
+                        }
+                    }
+                },
+                onDismiss = { showGlobalSearch = false },
+            )
+        }
+    }
+
     if (showOnboarding) {
         com.emberinn.app.ui.onboarding.OnboardingScreen(
             onImport = { importLauncher.launch(arrayOf("*/*")) },
@@ -135,20 +173,85 @@ fun MainScreen() {
                         openName = session.name
                     },
                 )
+            } else if (com.emberinn.app.ui.design.windowWidthClass() ==
+                com.emberinn.app.ui.design.WindowWidth.EXPANDED
+            ) {
+                // 展开屏 List-Detail（第 14 阶段）：导航轨 + 角色列表 | 角色主页同屏
+                // 轨道高亮恒为角色库空间（无论从今夜/书架进入详情）
+                Row(modifier = Modifier.fillMaxSize()) {
+                    HubRail(
+                        selected = 2,
+                        onSelect = { selectedDest = it },
+                        onSearch = { showGlobalSearch = true },
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                    ) {
+                        com.emberinn.app.ui.home.CharactersScreen(
+                            onOpenChat = { session ->
+                                openDetailId = null
+                                openSession(session.id)
+                                openName = session.name
+                            },
+                            onOpenSettings = { route ->
+                                selectedDest = 3
+                                if (route != null) settingsDeepLink = route
+                            },
+                            onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .fillMaxHeight(),
+                    ) {
+                        // 角色主页（Companion Space）：幕布英雄 + 故事轨道 + 身份区
+                        com.emberinn.app.ui.home.CharacterHomeScreen(
+                            record = detailRecord,
+                            vm = homeVm,
+                            onBack = { openDetailId = null },
+                            onOpenChat = { session ->
+                                openDetailId = null
+                                openSession(session.id)
+                                openName = session.name
+                            },
+                            onEdit = { editingCharacter = true },
+                        )
+                    }
+                }
             } else {
                 // 角色主页（Companion Space）：幕布英雄 + 故事轨道 + 身份区
-                com.emberinn.app.ui.home.CharacterHomeScreen(
-                    record = detailRecord,
-                    vm = homeVm,
-                    onBack = { openDetailId = null },
-                    onOpenChat = { session ->
-                        openDetailId = null
-                        openSession(session.id)
-                        openName = session.name
-                    },
-                    onEdit = { editingCharacter = true },
-                )
+                // 中屏（§五）限宽 600dp 居中——正文行宽与主目的地一致，避免横向拉宽
+                val medium = com.emberinn.app.ui.design.windowWidthClass() ==
+                    com.emberinn.app.ui.design.WindowWidth.MEDIUM
+                Box(Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = if (medium) {
+                            Modifier
+                                .fillMaxHeight()
+                                .widthIn(max = 600.dp)
+                                .align(Alignment.Center)
+                        } else {
+                            Modifier.fillMaxSize()
+                        },
+                    ) {
+                        com.emberinn.app.ui.home.CharacterHomeScreen(
+                            record = detailRecord,
+                            vm = homeVm,
+                            onBack = { openDetailId = null },
+                            onOpenChat = { session ->
+                                openDetailId = null
+                                openSession(session.id)
+                                openName = session.name
+                            },
+                            onEdit = { editingCharacter = true },
+                        )
+                    }
+                }
             }
+            searchOverlay()
             return
         }
         // 角色已被删除：退回首页
@@ -157,13 +260,15 @@ fun MainScreen() {
 
     val sessionId = openSessionId
     if (sessionId != null) {
-        val wide = LocalConfiguration.current.screenWidthDp >= 840
+        val wide = com.emberinn.app.ui.design.windowWidthClass() ==
+            com.emberinn.app.ui.design.WindowWidth.EXPANDED
         if (wide) {
             // 平板/折叠屏双栏：左缘导航轨 + 列表 + 聊天
             Row(modifier = Modifier.fillMaxSize()) {
                 HubRail(
                     selected = selectedDest,
                     onSelect = { selectedDest = it },
+                    onSearch = { showGlobalSearch = true },
                 )
                 Box(
                     modifier = Modifier
@@ -208,6 +313,7 @@ fun MainScreen() {
                     )
                 }
             }
+            searchOverlay()
             return
         }
         com.emberinn.app.ui.chat.ChatScreen(
@@ -228,24 +334,87 @@ fun MainScreen() {
         return
     }
 
+    val widthClass = com.emberinn.app.ui.design.windowWidthClass()
+    if (widthClass == com.emberinn.app.ui.design.WindowWidth.EXPANDED) {
+        // 展开屏无聊天：导航轨常驻（§五），不叠 FloatHub；搜索经轨顶放大镜
+        Row(modifier = Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
+            HubRail(
+                selected = selectedDest,
+                onSelect = { selectedDest = it },
+                onSearch = { showGlobalSearch = true },
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .statusBarsPadding(),
+            ) {
+                DestContent(
+                    selected = selectedDest,
+                    homeVm = homeVm,
+                    onOpenChat = { session ->
+                        openSession(session.id)
+                        openName = session.name
+                    },
+                    onOpenSettings = { route ->
+                        selectedDest = 3
+                        if (route != null) settingsDeepLink = route
+                    },
+                    onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
+                    settingsDeepLink = settingsDeepLink,
+                    onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+                    onSelectDestination = { selectedDest = it },
+                )
+            }
+        }
+        searchOverlay()
+        return
+    }
     Box(Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
-            DestContent(
-                selected = selectedDest,
-                homeVm = homeVm,
-                onOpenChat = { session ->
-                    openSession(session.id)
-                    openName = session.name
-                },
-                onOpenSettings = { route ->
-                    selectedDest = 3
-                    if (route != null) settingsDeepLink = route
-                },
-                onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
-                settingsDeepLink = settingsDeepLink,
-                onSettingsDeepLinkConsumed = { settingsDeepLink = null },
-                onSelectDestination = { selectedDest = it },
-            )
+            if (widthClass == com.emberinn.app.ui.design.WindowWidth.MEDIUM) {
+                // 中屏（600-840dp，§五）：内容最大宽 600dp 居中，导航同紧凑（FloatHub）
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .widthIn(max = 600.dp)
+                        .align(Alignment.Center),
+                ) {
+                    DestContent(
+                        selected = selectedDest,
+                        homeVm = homeVm,
+                        onOpenChat = { session ->
+                            openSession(session.id)
+                            openName = session.name
+                        },
+                        onOpenSettings = { route ->
+                            selectedDest = 3
+                            if (route != null) settingsDeepLink = route
+                        },
+                        onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
+                        settingsDeepLink = settingsDeepLink,
+                        onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+                        onSelectDestination = { selectedDest = it },
+                    )
+                }
+            } else {
+                DestContent(
+                    selected = selectedDest,
+                    homeVm = homeVm,
+                    onOpenChat = { session ->
+                        openSession(session.id)
+                        openName = session.name
+                    },
+                    onOpenSettings = { route ->
+                        selectedDest = 3
+                        if (route != null) settingsDeepLink = route
+                    },
+                    onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
+                    settingsDeepLink = settingsDeepLink,
+                    onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+                    onSelectDestination = { selectedDest = it },
+                )
+            }
         }
         // 悬浮主钮浮在内容上（§三范式）：静默圆粒 + 展开竖栈；长按=全域搜索
         FloatHub(
@@ -260,46 +429,13 @@ fun MainScreen() {
             onLongPress = { showGlobalSearch = true },
         )
 
-        if (showGlobalSearch) {
-            com.emberinn.app.ui.design.components.GlobalSearchPanel(
-                entriesProvider = { q ->
-                    val r = homeVm.search(q)
-                    buildList {
-                        r.characters.forEach { ch ->
-                            add(com.emberinn.app.ui.design.components.SearchEntry(ch.name, "角色卡", FaIcons.Mask, "角色") {
-                                openDetailId = ch.id
-                                editingCharacter = false
-                            })
-                        }
-                        r.sessions.forEach { se ->
-                            add(com.emberinn.app.ui.design.components.SearchEntry(se.name, "对话", FaIcons.Comments, "对话") {
-                                openSession(se.id)
-                                openName = se.name
-                            })
-                        }
-                        r.worldInfo.forEach { wi ->
-                            add(com.emberinn.app.ui.design.components.SearchEntry(wi.key, wi.characterName, FaIcons.BookOpen, "世界书") {
-                                settingsDeepLink = "worldinfo"
-                                selectedDest = 3
-                            })
-                        }
-                        r.settings.forEach { st ->
-                            add(com.emberinn.app.ui.design.components.SearchEntry(st.label, st.description, FaIcons.Gear, "设置") {
-                                if (st.route != null) settingsDeepLink = st.route
-                                selectedDest = 3
-                            })
-                        }
-                    }
-                },
-                onDismiss = { showGlobalSearch = false },
-            )
-        }
+        searchOverlay()
     }
 }
 
-/** 平板左缘导航轨：与 FloatHub 同一目的地集合。 */
+/** 平板左缘导航轨：与 FloatHub 同一目的地集合；顶部放大镜=全域搜索。 */
 @Composable
-private fun HubRail(selected: Int, onSelect: (Int) -> Unit) {
+private fun HubRail(selected: Int, onSelect: (Int) -> Unit, onSearch: () -> Unit) {
     val c = EmberTheme.colors
     Column(
         modifier = Modifier
@@ -308,6 +444,21 @@ private fun HubRail(selected: Int, onSelect: (Int) -> Unit) {
             .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onSearch),
+        ) {
+            Icon(
+                FaIcons.MagnifyingGlass,
+                contentDescription = "全域搜索",
+                tint = c.inkMute,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.height(20.dp))
         Destinations.forEachIndexed { index, dest ->
             RailItem(dest.label, dest.icon, selected == index) { onSelect(index) }
             Spacer(Modifier.height(18.dp))

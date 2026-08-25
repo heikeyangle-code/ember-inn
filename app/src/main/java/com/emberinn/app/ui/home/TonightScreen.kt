@@ -48,6 +48,7 @@ import java.util.Locale
  * 今夜主页（UI_REDESIGN_V3 §三 Companion Space · Editorial 定稿）：
  * 时段问候 Display → 续读英雄故事 → 角色海报轨道（收藏优先）→ 故事时间线（今晚/昨晚分组）。
  * 无 Dashboard 化：设置/API 一律不上首页；非对称层级=英雄卡 > 轨道 > 时间线。
+ * home_style 个性化（第 15 阶段）：editorial=上述完整形态；minimal=紧凑头 + 收藏轨道并入角色轨道。
  */
 @Composable
 fun TonightScreen(
@@ -57,6 +58,12 @@ fun TonightScreen(
     onGoLibrary: () -> Unit,
 ) {
     val c = EmberTheme.colors
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // 首页形态即时切换：AppearanceBus revision 驱动重读
+    val appearanceRev by com.emberinn.app.ui.design.AppearanceBus.revision.collectAsState()
+    val minimal = remember(appearanceRev) {
+        com.emberinn.app.ui.settings.AppearancePrefs.homeStyle(context) == "minimal"
+    }
     val characters by vm.characters.collectAsState()
     val sessions by vm.recentSessions.collectAsState()
     LaunchedEffect(Unit) { vm.refresh() }
@@ -78,46 +85,58 @@ fun TonightScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = EmberTheme.spacing.screenPadding),
     ) {
-        // ---- Editorial 页头：时钟弱墨 + 问候 Display Light ----
-        Spacer(Modifier.height(18.dp))
-        Text(clock, color = c.inkMute, fontSize = 13.sp, letterSpacing = 2.sp)
-        Spacer(Modifier.height(2.dp))
-        Text(greeting, color = c.ink, fontSize = 32.sp, fontWeight = FontWeight.Light, letterSpacing = 0.4.sp, lineHeight = 40.sp)
+        // ---- 页头：editorial=时钟弱墨+问候 Display；minimal=问候·时钟合并单行 ----
+        if (minimal) {
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(greeting, color = c.ink, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(10.dp))
+                Text(clock, color = c.inkMute, fontSize = 12.sp, letterSpacing = 1.2.sp)
+            }
+        } else {
+            Spacer(Modifier.height(18.dp))
+            Text(clock, color = c.inkMute, fontSize = 13.sp, letterSpacing = 2.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(greeting, color = c.ink, fontSize = 32.sp, fontWeight = FontWeight.Light, letterSpacing = 0.4.sp, lineHeight = 40.sp)
+        }
 
         // ---- 英雄故事：最近会话（大头像 + 两行预览 + 时间） ----
         val hero = sessions.firstOrNull()
         if (hero != null) {
             val heroChar = hero.characterId?.let { id -> characters.firstOrNull { it.id == id } }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(if (minimal) 12.dp else 18.dp))
             HeroStory(
                 record = hero,
                 character = heroChar,
                 preview = vm.lastMessage(hero.id),
                 timeLabel = agoLabel(hero.updatedAt),
                 onClick = { onOpenChat(hero) },
+                compact = minimal,
             )
         }
 
-        // ---- 收藏角色轨道（pinned 优先置前） ----
-        val pinned = characters.filter { it.pinned }
-        if (pinned.isNotEmpty()) {
-            RailHeader("收藏的角色")
-            SectionRail {
-                pinned.forEach { record ->
-                    PosterTile(
-                        name = record.name,
-                        avatarPath = record.avatarPath,
-                        width = 92.dp,
-                        aspect = 0.70f,
-                        onClick = { onOpenDetail(record) },
-                    )
+        if (!minimal) {
+            // ---- 收藏角色轨道（pinned 优先置前）：仅 editorial 形态 ----
+            val pinned = characters.filter { it.pinned }
+            if (pinned.isNotEmpty()) {
+                RailHeader("收藏的角色")
+                SectionRail {
+                    pinned.forEach { record ->
+                        PosterTile(
+                            name = record.name,
+                            avatarPath = record.avatarPath,
+                            width = 92.dp,
+                            aspect = 0.70f,
+                            onClick = { onOpenDetail(record) },
+                        )
+                    }
                 }
             }
         }
 
-        // ---- 角色轨道：全部（收藏在前），末位导入幽灵位 ----
+        // ---- 角色轨道：全部（收藏在前，minimal 单轨道承载），末位导入幽灵位 ----
         RailHeader("角色", onSeeAll = onGoLibrary)
         SectionRail {
             val ordered = characters.sortedByDescending { it.pinned }
@@ -158,7 +177,7 @@ fun TonightScreen(
             )
         }
 
-        Spacer(Modifier.height(150.dp))
+        Spacer(Modifier.height(if (minimal) 110.dp else 150.dp))
     }
 }
 
@@ -170,6 +189,7 @@ private fun HeroStory(
     preview: String?,
     timeLabel: String,
     onClick: () -> Unit,
+    compact: Boolean = false,
 ) {
     val c = EmberTheme.colors
     val shapes = EmberTheme.shapes
@@ -180,16 +200,20 @@ private fun HeroStory(
             .clip(RoundedCornerShape(shapes.cornerCard))
             .background(c.surface)
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(if (compact) 12.dp else 16.dp),
     ) {
-        HeroAvatar(character?.avatarPath, record.name)
-        Spacer(Modifier.width(14.dp))
+        if (compact) {
+            AvatarCircle(character?.avatarPath, character?.name ?: record.name, 44.dp)
+        } else {
+            HeroAvatar(character?.avatarPath, record.name)
+        }
+        Spacer(Modifier.width(if (compact) 12.dp else 14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     character?.name ?: record.name,
                     color = c.ink,
-                    fontSize = 17.sp,
+                    fontSize = if (compact) 15.sp else 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     modifier = Modifier.weight(1f, fill = false),

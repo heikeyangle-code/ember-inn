@@ -73,7 +73,7 @@ fun ExtensionsHubScreen(
             SettingsTopBar(title = "扩展", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                contentPadding = settingsPagePadding(),
             ) {
                 items(entries, key = { it.title }) { entry ->
                     ExtensionRow(entry, partial.contains(entry.title))

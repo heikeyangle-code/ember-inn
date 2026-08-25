@@ -1896,6 +1896,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _notice = MutableStateFlow<String?>(null)
     val notice: StateFlow<String?> = _notice
 
+    /** 官方 power_user.show_group_chat_queue（group-chats.js printGroupQueue）：
+     *  群聊生成期间的回复队列——当前正在生成的成员 + 待生成成员；
+     *  非群聊 / 本轮结束 / 手动停止后为 null。 */
+    data class GroupQueueEntry(val id: String, val name: String, val avatarPath: String?)
+    data class GroupQueueState(
+        val entries: List<GroupQueueEntry>,
+        val currentIndex: Int,
+    )
+
+    private val _groupQueue = MutableStateFlow<GroupQueueState?>(null)
+    val groupQueue: StateFlow<GroupQueueState?> = _groupQueue
+
     /** /setinput 输入框草稿：ChatScreen 消费后清空。 */
     private val _inputDraft = MutableStateFlow<String?>(null)
     val inputDraft: StateFlow<String?> = _inputDraft
@@ -2258,6 +2270,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val wasSwipe = generatingSwipe
         _isStreaming.value = false
         _isImpersonating.value = false
+        // 官方 stopGeneration：整批终止，队列随即清空（group-chats.js hideSwipeButtons 语义）
+        _groupQueue.value = null
         if (!wasImpersonating && rawReasoning.isNotBlank()) {
             _lastReasoning.value = rawReasoning
         }
@@ -3380,6 +3394,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 inChatExtensions = buildGroupDepthPrompts(speaker),
             )
         }
+        // 官方 printGroupQueue：本轮回复队列（当前发言成员 + 待生成成员）
+        _groupQueue.value = GroupQueueState(
+            entries = speakers.map { GroupQueueEntry(it.id, it.name, it.avatarPath) },
+            currentIndex = 0,
+        )
         runGroupStep(steps, 0, history, groupGenId = groupGenId)
     }
 
@@ -3393,6 +3412,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (index >= steps.size) return
         val step = steps[index]
         currentCharName = step.speaker.name
+        // 官方 printGroupQueue：推进队列当前位（多步=整轮队列；单步自动续写=当前成员）
+        _groupQueue.value = if (steps.size > 1) {
+            _groupQueue.value?.takeIf { it.entries.size == steps.size }?.copy(currentIndex = index)
+                ?: GroupQueueState(steps.map { GroupQueueEntry(it.speaker.id, it.speaker.name, it.speaker.avatarPath) }, index)
+        } else if (groupGenId != null) {
+            GroupQueueState(steps.map { GroupQueueEntry(it.speaker.id, it.speaker.name, it.speaker.avatarPath) }, 0)
+        } else {
+            _groupQueue.value
+        }
         val isLastStep = index == steps.lastIndex
         startStream(
             history = history,
@@ -3436,6 +3464,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         groupGenId,
                     )
                     !isLastStep -> runGroupStep(steps, index + 1, msgs)
+                    // 官方 printGroupQueue：本轮全部生成完毕，清空队列
+                    else -> _groupQueue.value = null
                 }
             },
         )
@@ -4071,7 +4101,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 allowName2Display = behavior.allowName2Display,
                 hasReasoningPrefix = hasReasoningPrefix,
                 groupMemberNames = groupMembers.map { it.name },
-                groupTrimmingEnabled = group != null,
+                // 官方 power_user.disable_group_trimming（默认关）：群聊时按成员名截断清洗
+                groupTrimmingEnabled = group != null && !behavior.disableGroupTrimming,
                 collapseNewlines = RenderPrefs.collapseNewlines(getApplication()),
                 trimSpaces = behavior.trimSpaces,
                 trimSentences = behavior.trimSentences,

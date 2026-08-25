@@ -63,6 +63,44 @@ object AppearancePrefs {
             .apply()
     }
 
+    // ---- App Shell 个性化（第 15 阶段，只影响壳层；Chat Theme 独立不受影响）----
+
+    /** 壳层密度：comfortable（默认，组间留白舒展）/ compact（组间距收紧，信息密度更高）。 */
+    fun shellDensity(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("shell_density", "comfortable") ?: "comfortable"
+
+    fun saveShellDensity(context: Context, density: String) {
+        val valid = if (density == "compact") "compact" else "comfortable"
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("shell_density", valid)
+            .apply()
+        com.emberinn.app.ui.design.AppearanceBus.notifyChanged()
+    }
+
+    /** 壳层动效层级：full（默认弹簧物理）/ reduced（时长收紧，接近即时反馈）。 */
+    fun motionLevel(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("motion_level", "full") ?: "full"
+
+    fun saveMotionLevel(context: Context, level: String) {
+        val valid = if (level == "reduced") "reduced" else "full"
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("motion_level", valid)
+            .apply()
+        com.emberinn.app.ui.design.AppearanceBus.notifyChanged()
+    }
+
+    /** 首页形态：editorial（默认，Display 问候 + 英雄 + 双轨道）/ minimal（紧凑头 + 合并轨道）。 */
+    fun homeStyle(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("home_style", "editorial") ?: "editorial"
+
+    fun saveHomeStyle(context: Context, style: String) {
+        val valid = if (style == "minimal") "minimal" else "editorial"
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("home_style", valid)
+            .apply()
+        com.emberinn.app.ui.design.AppearanceBus.notifyChanged()
+    }
+
     /** 官方背景系统：全局背景图路径（filesDir/backgrounds/ 下的文件）。空 = 无全局背景。 */
     fun globalBackground(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("global_background", "") ?: ""

@@ -65,7 +65,7 @@ fun UserSettingsScreen(
             SettingsTopBar(title = "用户设置", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                contentPadding = settingsPagePadding(),
             ) {
                 item {
                     UserNavRow("外观与主题", "主题模式 · 氛围滤镜 · 圆角字体", FaIcons.Paintbrush, onOpenAppearance)
@@ -96,6 +96,16 @@ fun UserSettingsScreen(
                             hint = "allow_name1_display：冒充结果保留“用户名:”前缀；关=剥掉并裁错误名字（默认关）",
                             checked = behavior.allowName1Display,
                         ) { saveBehavior(behavior.copy(allowName1Display = it)) }
+                        UserSwitchRow(
+                            label = "群聊不按成员名截断",
+                            hint = "disable_group_trimming：群聊回复清洗时不按其他成员名截断（默认关）",
+                            checked = behavior.disableGroupTrimming,
+                        ) { saveBehavior(behavior.copy(disableGroupTrimming = it)) }
+                        UserSwitchRow(
+                            label = "显示群聊生成队列",
+                            hint = "show_group_chat_queue：群聊生成时在输入区上方显示本轮回复队列——当前成员与待生成成员（默认关）",
+                            checked = behavior.showGroupChatQueue,
+                        ) { saveBehavior(behavior.copy(showGroupChatQueue = it)) }
                         ShellInput(
                             value = behavior.markdownEscapeStrings,
                             onValueChange = { v ->
@@ -229,6 +239,11 @@ fun UserSettingsScreen(
                             checked = behavior.fuzzySearch,
                         ) { saveBehavior(behavior.copy(fuzzySearch = it)) }
                         UserSwitchRow(
+                            label = "角色列表网格视图",
+                            hint = "char_list_grid：书架用海报墙网格展示，关=紧凑列表视图（官方默认关；本 App 以海报墙为核心形态，默认开）",
+                            checked = behavior.charListGrid,
+                        ) { saveBehavior(behavior.copy(charListGrid = it)) }
+                        UserSwitchRow(
                             label = "显示标签筛选",
                             hint = "show_tag_filters：书架顶部标签筛选轨道（官方默认关；本 App 以标签轨道为核心浏览方式，默认开）",
                             checked = behavior.showTagFilters,
@@ -292,7 +307,7 @@ fun UserSettingsScreen(
                         if (behavior.playMessageSound) {
                             UserSwitchRow(
                                 label = "仅后台提示",
-                                hint = "play_sound_unfocused（官方默认开；当前前后台同音，登记边界）",
+                                hint = "play_sound_unfocused：仅 App 在后台时播放提示音（官方默认开）",
                                 checked = behavior.playSoundUnfocused,
                             ) { saveBehavior(behavior.copy(playSoundUnfocused = it)) }
                         }
@@ -343,6 +358,29 @@ fun UserSettingsScreen(
                                     saveBehavior(behavior.copy(autoSwipeMinimumLength = v.filter { ch -> ch.isDigit() }.toIntOrNull() ?: 0))
                                 },
                                 label = "最短回复长度（不足则重掷）",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            ShellInput(
+                                value = behavior.autoSwipeBlacklist.joinToString(", "),
+                                onValueChange = { v ->
+                                    saveBehavior(
+                                        behavior.copy(
+                                            autoSwipeBlacklist = v.split(',')
+                                                .mapNotNull { kw -> kw.trim().takeIf(String::isNotEmpty) }
+                                                .toSet(),
+                                        ),
+                                    )
+                                },
+                                label = "黑名单关键词（逗号分隔，命中即触发重掷）",
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            ShellInput(
+                                value = behavior.autoSwipeBlacklistThreshold.toString(),
+                                onValueChange = { v ->
+                                    saveBehavior(behavior.copy(autoSwipeBlacklistThreshold = v.filter { ch -> ch.isDigit() }.toIntOrNull() ?: 2))
+                                },
+                                label = "黑名单命中阈值（达到次数即重掷，官方默认 2）",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth(),
                             )

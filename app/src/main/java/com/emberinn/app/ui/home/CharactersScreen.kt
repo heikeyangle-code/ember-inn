@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
@@ -95,11 +97,15 @@ fun CharactersScreen(
     // 筛选 / 排序（§4.3 海报墙+筛选）：收藏轨道、标签轨道、官方 11 档书架排序
     var onlyFavorites by rememberSaveable { mutableStateOf(false) }
     var tagFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    // 官方 power_user.sort_field + sort_order（power-user.js 默认 name/asc），跨会话持久化
-    val behavior = remember { BehaviorPrefs.load(context) }
+    // 官方 power_user.sort_field + sort_order（power-user.js 默认 name/asc），跨会话持久化；
+    // behavior 挂 revision 总线：设置页改书架行为（char_list_grid/show_tag_filters/aux_field）后返回即时生效
+    val behaviorRevision by BehaviorPrefs.revision.collectAsState()
+    val behavior = remember(behaviorRevision) { BehaviorPrefs.load(context) }
     var sortField by rememberSaveable { mutableStateOf(behavior.sortField) }
     var sortOrder by rememberSaveable { mutableStateOf(behavior.sortOrder) }
     var showSortSheet by remember { mutableStateOf(false) }
+    // 官方 power_user.char_list_grid：书架网格（海报墙）/列表视图切换，跨会话持久化
+    val gridView = behavior.charListGrid
     val searchResults = remember(query) { vm.search(query) }
 
     // 每次进入书架/从设置返回都刷新（导入、删除后列表不过期）
@@ -198,6 +204,16 @@ fun CharactersScreen(
                         }
                     }
                     Spacer(Modifier.width(10.dp))
+                    // 视图切换（官方 char_list_grid：网格海报墙 ⇄ 列表），保存即经 revision 总线生效
+                    ShellChip(
+                        label = if (gridView) "海报" else "列表",
+                        selected = false,
+                        onClick = {
+                            val cur = BehaviorPrefs.load(context)
+                            BehaviorPrefs.save(context, cur.copy(charListGrid = !gridView))
+                        },
+                    )
+                    Spacer(Modifier.width(8.dp))
                     // 排序入口：chip 即当前值摘要（官方 11 档，点击弹层切换）
                     ShellChip(
                         label = "排序 · ${currentSort?.short ?: "默认"}",
@@ -219,10 +235,53 @@ fun CharactersScreen(
                     onImport = { importLauncher.launch(arrayOf("*/*")) },
                     onDirectChat = { onOpenChat(vm.newSession(null, "AI 对话")) },
                 )
+            } else if (!gridView) {
+                // 官方 char_list_grid=false 列表视图：头像 + 名称/副标题行，信息密度高于海报墙
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 96.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(filtered.size, key = { filtered[it].id }) { idx ->
+                        val record = filtered[idx]
+                        CharacterListRow(
+                            record = record,
+                            subtitle = when (behavior.auxField) {
+                                "creator" -> fieldsOf[record.id]?.creator
+                                else -> fieldsOf[record.id]?.characterVersion
+                            }?.takeIf { it.isNotBlank() },
+                            chatCount = activity[record.id]?.second,
+                            onClick = { EmberHaptics.select(haptic); onOpenDetail(record) },
+                            onLongClick = { menuRecord = record },
+                        )
+                    }
+                    item(key = "import-row") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable { EmberHaptics.select(haptic); showImportSheet = true }
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(c.surfaceSink),
+                            ) {
+                                Icon(FaIcons.Plus, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Text("导入角色卡", color = c.inkMute, fontSize = 15.sp)
+                        }
+                    }
+                }
             } else {
-                // 海报墙：双列瀑布，纵横比随卡 id 哈希错落
+                // 海报墙：自适应列（第 14 阶段）——手机双列瀑布不变（160dp 最小列宽即 2 列），
+                // 中/展开屏自动加密列数，海报尺寸不随窗口拉宽
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Adaptive(minSize = 160.dp),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -535,6 +594,54 @@ private fun SortOptionRow(label: String, selected: Boolean, onClick: () -> Unit)
         )
         if (selected) {
             Icon(FaIcons.Check, contentDescription = "当前排序", tint = c.accent, modifier = Modifier.size(14.dp))
+        }
+    }
+}
+
+/** 书架列表行（官方 char_list_grid=false）：头像 + 名称/副标题 + 会话数摘要，
+ *  长按同海报长按菜单；比海报墙更高的信息密度。 */
+@Composable
+private fun CharacterListRow(
+    record: CharacterRecord,
+    subtitle: String?,
+    chatCount: Int?,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+    ) {
+        AvatarCircle(path = record.avatarPath, name = record.name, size = 46.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                record.name + if (record.pinned) " ·↑" else "",
+                color = c.ink,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    subtitle,
+                    color = c.inkMute,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                )
+            }
+        }
+        if (chatCount != null && chatCount > 0) {
+            Text(
+                "$chatCount 场会话",
+                color = c.inkMute,
+                fontSize = 12.sp,
+            )
         }
     }
 }

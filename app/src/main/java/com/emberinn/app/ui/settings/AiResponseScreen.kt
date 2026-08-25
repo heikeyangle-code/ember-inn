@@ -89,7 +89,7 @@ fun AiResponseScreen(
             )
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                contentPadding = settingsPagePadding(),
             ) {
                 item {
                     // 当前连接行（点击进 API 连接分区）

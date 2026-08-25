@@ -37,7 +37,7 @@ fun MessageRenderScreen(onBack: () -> Unit) {
         SettingsTopBar(title = "消息渲染", onBack = onBack, sky = settingsSky)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+            contentPadding = settingsPagePadding(),
         ) {
             item {
                 var collapse by remember { mutableStateOf(RenderPrefs.collapseNewlines(context)) }

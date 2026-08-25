@@ -253,6 +253,8 @@ fun ChatScreen(
     val displayRevision by vm.displayRevision.collectAsState()
     val generationEpoch by vm.generationEpoch.collectAsState()
     val pastChatsRevision by vm.pastChatsRevision.collectAsState()
+    // 官方 power_user.show_group_chat_queue：群聊生成期间的回复队列
+    val groupQueue by vm.groupQueue.collectAsState()
 
     // ---- V2 内核渲染：池 + 官方主题全量同步（单轨，内核为唯一消息渲染管线） ----
     val context = LocalContext.current
@@ -906,11 +908,29 @@ fun ChatScreen(
     // 不重建整个 #chat——每 tick 全量 renderChat 会重挂全部消息节点，图片重载、滚动抖动。
     // 节流 ~120ms；结束后的权威渲染由 messages/isStreaming 变化触发 renderChat 完成。
     val behaviorSmooth = remember(behaviorRevision) { BehaviorPrefs.load(context) }
-    // 官方 play_message_sound：回复完成提示音（isStreaming 真→假跳变时触发一次）
+    // 官方 power_user.show_group_chat_queue（默认关）：群聊生成时显示回复队列
+    val showGroupQueue = remember(behaviorRevision) { BehaviorPrefs.load(context).showGroupChatQueue }
+    // 官方 play_message_sound：回复完成提示音（isStreaming 真→假跳变时触发一次）；
+    // play_sound_unfocused（官方默认开）= 仅 App 在后台（非 RESUMED）时播放
+    // （power-user.js:384-390 playMessageSound——有焦点且 unfocused 限定时跳过）
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    var appResumed by remember { mutableStateOf(lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            appResumed = when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> true
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> false
+                else -> appResumed
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var prevStreaming by remember { mutableStateOf(false) }
     LaunchedEffect(isStreaming) {
         if (prevStreaming && !isStreaming && !isImpersonating && behaviorSmooth.playMessageSound) {
-            com.emberinn.app.ui.design.components.EmberSound.message(context)
+            val skipForFocus = behaviorSmooth.playSoundUnfocused && appResumed
+            if (!skipForFocus) com.emberinn.app.ui.design.components.EmberSound.message(context)
         }
         prevStreaming = isStreaming
     }
@@ -1374,6 +1394,7 @@ fun ChatScreen(
                     },
                     formHeightDp = kernelFormHeight,
                     isStreaming = isStreaming,
+                    groupQueue = groupQueue.takeIf { showGroupQueue && isStreaming },
                     worldHitsCount = worldHits.size,
                     contextUsage = contextUsage,
                     onOpenWorldPanel = { worldPanel = true },
@@ -4128,6 +4149,7 @@ private fun ChatComposerOverlays(
     onInputReplace: (String) -> Unit,
     formHeightDp: Float,
     isStreaming: Boolean,
+    groupQueue: ChatViewModel.GroupQueueState?,
     worldHitsCount: Int,
     contextUsage: Pair<Int, Int>?,
     onOpenWorldPanel: () -> Unit,
@@ -4272,7 +4294,61 @@ private fun ChatComposerOverlays(
                     }
                 }
             }
+            // 官方 power_user.show_group_chat_queue（group-chats.js printGroupQueue）：
+            // 生成期间悬浮在输入区上方——当前发言成员高亮，其余为待生成队列
+            if (groupQueue != null && groupQueue.entries.isNotEmpty()) {
+                GroupQueueStrip(queue = groupQueue, accent = accent)
+            }
             // 作曲行本体 = 内核 #send_form（官方 DOM/CSS）；原生侧到此为止。
+    }
+}
+
+/** 群聊生成队列条（官方 #group_queue 容器的移动端形态）：
+ *  当前发言成员头像高亮呼吸 + 名字，后接待生成成员头像列，最后一位完成后整条淡出。 */
+@Composable
+private fun GroupQueueStrip(queue: ChatViewModel.GroupQueueState, accent: Color) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = EmberTheme.colors.surface2.copy(alpha = 0.94f),
+        border = BorderStroke(0.5.dp, EmberTheme.colors.line),
+        shadowElevation = 4.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            queue.entries.forEachIndexed { index, entry ->
+                val isCurrent = index == queue.currentIndex
+                RoleAvatar(
+                    avatarPath = entry.avatarPath,
+                    name = entry.name,
+                    accent = if (isCurrent) accent else EmberTheme.colors.lineStrong,
+                    size = if (isCurrent) 28 else 22,
+                )
+                if (isCurrent) {
+                    Text(
+                        entry.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = EmberTheme.colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (index < queue.entries.lastIndex) {
+                    Text(
+                        "→",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = EmberTheme.colors.inkMute.copy(alpha = 0.5f),
+                    )
+                }
+            }
+        }
     }
 }
 

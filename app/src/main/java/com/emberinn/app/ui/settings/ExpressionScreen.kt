@@ -76,7 +76,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
             SettingsTopBar(title = "表情精灵", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp),
+                contentPadding = settingsPagePadding(vertical = 0.dp),
             ) {
                 item {
                     Text(

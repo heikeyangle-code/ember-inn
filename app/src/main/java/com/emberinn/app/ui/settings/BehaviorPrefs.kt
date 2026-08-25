@@ -72,6 +72,8 @@ data class BehaviorSettings(
     val preferCharacterPrompt: Boolean = true,
     /** 官方 power_user.prefer_character_jailbreak（默认开）：角色卡 post_history_instructions 覆盖全局。 */
     val preferCharacterJailbreak: Boolean = true,
+    /** 官方 power_user.disable_group_trimming（默认关）：群聊回复不按其他成员名截断清洗。 */
+    val disableGroupTrimming: Boolean = false,
     /** 官方 power_user.confirm_message_delete（默认开）：删除消息前弹确认（script.js
      *  .mes_edit_delete → deleteMessage askConfirmation）；关=编辑区删除钮直接删。 */
     val confirmMessageDelete: Boolean = true,
@@ -84,6 +86,12 @@ data class BehaviorSettings(
     val customStoppingStrings: String = "",
     /** 官方 power_user.custom_stopping_strings_macro（默认开）：停止串先过宏替换。 */
     val customStoppingStringsMacro: Boolean = true,
+    /** 官方 power_user.show_group_chat_queue（默认关）：群聊生成时显示本轮回复队列
+     *  （group-chats.js printGroupQueue：当前发言成员 + 待生成成员）。 */
+    val showGroupChatQueue: Boolean = false,
+    /** 官方 power_user.char_list_grid（官方默认 false=列表视图）：书架网格/列表视图切换；
+     *  本 App 以海报墙为核心浏览形态，故默认开（网格）。 */
+    val charListGrid: Boolean = true,
 )
 
 object BehaviorPrefs {
@@ -152,10 +160,13 @@ object BehaviorPrefs {
             auxField = p.getString("aux_field", "character_version") ?: "character_version",
             preferCharacterPrompt = p.getBoolean("prefer_character_prompt", true),
             preferCharacterJailbreak = p.getBoolean("prefer_character_jailbreak", true),
+            disableGroupTrimming = p.getBoolean("disable_group_trimming", false),
             confirmMessageDelete = p.getBoolean("confirm_message_delete", true),
             restoreUserInput = p.getBoolean("restore_user_input", true),
             customStoppingStrings = p.getString("custom_stopping_strings", "") ?: "",
             customStoppingStringsMacro = p.getBoolean("custom_stopping_strings_macro", true),
+            showGroupChatQueue = p.getBoolean("show_group_chat_queue", false),
+            charListGrid = p.getBoolean("char_list_grid", true),
         )
     }
 
@@ -200,10 +211,13 @@ object BehaviorPrefs {
             .putString("aux_field", s.auxField)
             .putBoolean("prefer_character_prompt", s.preferCharacterPrompt)
             .putBoolean("prefer_character_jailbreak", s.preferCharacterJailbreak)
+            .putBoolean("disable_group_trimming", s.disableGroupTrimming)
             .putBoolean("confirm_message_delete", s.confirmMessageDelete)
             .putBoolean("restore_user_input", s.restoreUserInput)
             .putString("custom_stopping_strings", s.customStoppingStrings)
             .putBoolean("custom_stopping_strings_macro", s.customStoppingStringsMacro)
+            .putBoolean("show_group_chat_queue", s.showGroupChatQueue)
+            .putBoolean("char_list_grid", s.charListGrid)
             .apply()
         revision.value += 1
     }

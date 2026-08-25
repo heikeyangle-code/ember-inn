@@ -95,7 +95,8 @@ fun EditorialHeader(
     }
 }
 
-/** 轨道节头：组题 + 「查看全部」入口（横向轨道的标准头）。 */
+/** 轨道节头：组题 + 「查看全部」入口（横向轨道的标准头）。
+ *  组间上距=壳层密度令牌（第 15 阶段：紧凑档收紧轨道呼吸）。 */
 @Composable
 fun RailHeader(
     title: String,
@@ -105,7 +106,7 @@ fun RailHeader(
     val c = EmberTheme.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth().padding(start = 4.dp, top = 22.dp, bottom = 10.dp),
+        modifier = modifier.fillMaxWidth().padding(start = 4.dp, top = EmberTheme.spacing.sectionGap, bottom = 10.dp),
     ) {
         Text(
             title.uppercase(),

@@ -8,7 +8,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -53,6 +56,27 @@ class MainActivity : ComponentActivity() {
             val themeJson by official.currentThemeJson.collectAsState()
             val derived = remember(themeJson) { com.emberinn.app.ui.design.ShellTheme.derive(themeJson) }
             val shell = remember(themeJson) { official.shellSettings() }
+            // 主题切换 lerp 400ms（第 16 阶段 Polish，审计表遗留项）：全套壳层颜色平滑过渡；
+            // 官方 reduced_motion / 壳层动效减弱档 → 80ms 近似瞬切
+            var animatedColors by remember {
+                mutableStateOf(derived.colors)
+            }
+            LaunchedEffect(derived.colors) {
+                val start = animatedColors
+                val end = derived.colors
+                if (start == end) return@LaunchedEffect
+                val reduced = shell.reducedMotion ||
+                    AppearancePrefs.motionLevel(appContext) == "reduced"
+                val durationMs = if (reduced) 80 else 400
+                androidx.compose.animation.core.animate(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = androidx.compose.animation.core.tween(durationMs),
+                ) { v, _ ->
+                    animatedColors = start.lerpTo(end, v)
+                }
+                animatedColors = end
+            }
             // 字体等外观偏好变更经 AppearanceBus 推送，此处按 revision 重读
             val appearanceRev by com.emberinn.app.ui.design.AppearanceBus.revision.collectAsState()
             val fontFamily = remember(appearanceRev) {
@@ -75,14 +99,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val radius = remember(appearanceRev) { AppearancePrefs.radius(appContext) }
+            // 壳层个性化（第 15 阶段）：密度/动效档位，只影响壳层令牌，Chat Theme 不动
+            val density = remember(appearanceRev) { AppearancePrefs.shellDensity(appContext) }
+            val motionLevel = remember(appearanceRev) { AppearancePrefs.motionLevel(appContext) }
             EmberTheme(
-                colors = derived.colors,
+                colors = animatedColors,
                 chat = derived.chat,
                 stageTint = derived.stageTint,
                 reducedMotion = shell.reducedMotion,
                 blur = derived.blurRadius,
                 fontFamily = fontFamily,
                 radius = radius,
+                density = density,
+                motionLevel = motionLevel,
             ) {
                 Box {
                     MainScreen()

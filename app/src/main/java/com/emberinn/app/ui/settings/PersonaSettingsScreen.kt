@@ -165,7 +165,7 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
             )
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                contentPadding = settingsPagePadding(),
             ) {
                 if (message != null) {
                     item {

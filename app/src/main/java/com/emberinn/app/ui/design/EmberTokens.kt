@@ -2,6 +2,7 @@ package com.emberinn.app.ui.design
 
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -47,7 +48,31 @@ data class EmberColors(
     val success: Color,
     val warning: Color,
     val danger: Color,
-)
+) {
+    /** 主题切换 lerp（第 16 阶段）：全套令牌向目标调色板线性插值（400ms 转场用）。 */
+    fun lerpTo(other: EmberColors, t: Float): EmberColors = EmberColors(
+        bg = bg.lerp(other.bg, t),
+        bgTint = bgTint.lerp(other.bgTint, t),
+        surface = surface.lerp(other.surface, t),
+        surface2 = surface2.lerp(other.surface2, t),
+        surfaceSink = surfaceSink.lerp(other.surfaceSink, t),
+        ink = ink.lerp(other.ink, t),
+        inkSoft = inkSoft.lerp(other.inkSoft, t),
+        inkMute = inkMute.lerp(other.inkMute, t),
+        inkSoft2 = inkSoft2.lerp(other.inkSoft2, t),
+        line = line.lerp(other.line, t),
+        lineStrong = lineStrong.lerp(other.lineStrong, t),
+        accent = accent.lerp(other.accent, t),
+        accentSoft = accentSoft.lerp(other.accentSoft, t),
+        accentBg = accentBg.lerp(other.accentBg, t),
+        ai = ai.lerp(other.ai, t),
+        aiSoft = aiSoft.lerp(other.aiSoft, t),
+        aiBg = aiBg.lerp(other.aiBg, t),
+        success = success.lerp(other.success, t),
+        warning = warning.lerp(other.warning, t),
+        danger = danger.lerp(other.danger, t),
+    )
+}
 
 /** 形状性格：每套皮肤可调维度（锐利紧凑 vs 圆润舒展）。 */
 data class EmberShapes(
@@ -95,3 +120,21 @@ data class ChatAreaTheme(
     val topScrim: Color?,
     val floatingInput: Boolean,
 )
+
+/**
+ * 窗口宽度档位（第 14 阶段自适应布局）：M3 WindowWidthSizeClass 同口径阈值
+ * （compact <600 / medium 600-840 / expanded ≥840），以 screenWidthDp 自实现——
+ * 行为与官方 material3-adaptive 等价，不引入新依赖、不破坏现有工程。
+ * 配置变更（旋转/折叠）时 LocalConfiguration 重组自动重算。
+ */
+enum class WindowWidth { COMPACT, MEDIUM, EXPANDED }
+
+@androidx.compose.runtime.Composable
+fun windowWidthClass(): WindowWidth {
+    val w = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+    return when {
+        w >= 840 -> WindowWidth.EXPANDED
+        w >= 600 -> WindowWidth.MEDIUM
+        else -> WindowWidth.COMPACT
+    }
+}

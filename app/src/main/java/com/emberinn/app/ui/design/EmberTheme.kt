@@ -63,10 +63,24 @@ fun shapesForRadius(radius: String): EmberShapes = when (radius) {
     else -> EmberShapes(16.dp, 14.dp, 28.dp, 8.dp)
 }
 
+/** 壳层密度两档 → 间距节奏（第 15 阶段）：comfortable=舒展留白 / compact=组间收紧。 */
+fun spacingForDensity(density: String): EmberSpacing = when (density) {
+    "compact" -> EmberSpacing(4.dp, 16.dp, 6.dp, 16.dp)
+    else -> EmberSpacing(4.dp, 20.dp, 8.dp, 22.dp)
+}
+
+/** 壳层动效两档（第 15 阶段）：full=弹簧物理 / reduced=时长收紧（pageMs≈112 / sheetMs≈84）。 */
+fun motionForLevel(level: String): EmberMotion = when (level) {
+    "reduced" -> EmberMotion(scale = 0.35f)
+    else -> EmberMotion()
+}
+
 /**
  * 应用根主题。
  * @param colors 由官方主题字段推导的完整调色板（ShellTheme.derive）
  * @param radius 外观页圆角偏好（default/square/rounded/circle）
+ * @param density 外观页壳层密度（comfortable/compact，只影响壳层间距）
+ * @param motionLevel 外观页动效档位（full/reduced，只影响壳层时长）
  */
 @Composable
 fun EmberTheme(
@@ -77,14 +91,16 @@ fun EmberTheme(
     blur: Dp = 12.dp,
     fontFamily: FontFamily = FontFamily.Default,
     radius: String = "default",
+    density: String = "comfortable",
+    motionLevel: String = "full",
     content: @Composable () -> Unit,
 ) {
     val dark = colors.bg.luminance() < 0.5f
     CompositionLocalProvider(
         LocalEmberColors provides colors,
         LocalEmberShapes provides shapesForRadius(radius),
-        LocalEmberSpacing provides EmberSpacing(4.dp, 20.dp, 8.dp, 24.dp),
-        LocalEmberMotion provides EmberMotion(),
+        LocalEmberSpacing provides spacingForDensity(density),
+        LocalEmberMotion provides motionForLevel(motionLevel),
         LocalEmberChatTheme provides chat,
         LocalEmberDark provides dark,
         LocalEmberStageTint provides stageTint,

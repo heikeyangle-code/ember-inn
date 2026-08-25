@@ -105,6 +105,9 @@ fun SettingsScreen(
             "caption" -> open(SettingsPage.CAPTION)
             "expression" -> open(SettingsPage.EXPRESSION)
             "regex" -> open(SettingsPage.REGEX)
+            "extensions" -> open(SettingsPage.EXTENSIONS)
+            "presets" -> open(SettingsPage.PRESETS)
+            "authorsnote" -> open(SettingsPage.AUTHORS_NOTE)
             "about" -> open(SettingsPage.ABOUT)
             "data" -> open(SettingsPage.DATA)
             else -> {}
@@ -292,7 +295,7 @@ private fun SettingsHome(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        contentPadding = settingsPagePadding(vertical = 16.dp),
     ) {
         item {
             Column {
@@ -417,6 +420,14 @@ fun SettingsGlassPage(content: @Composable (com.skydoves.cloudy.Sky) -> Unit) {
         content(sky)
     }
 }
+
+/** 设置页 LazyColumn 统一页缘（第 15 阶段）：壳层密度令牌驱动（紧凑档 16dp / 舒展 20dp）。 */
+@Composable
+fun settingsPagePadding(vertical: androidx.compose.ui.unit.Dp = 8.dp): androidx.compose.foundation.layout.PaddingValues =
+    androidx.compose.foundation.layout.PaddingValues(
+        horizontal = EmberTheme.spacing.screenPadding,
+        vertical = vertical,
+    )
 
 /** 设置子页通用顶栏（新语言 §4.6）：透明平面 + 弱墨返回粒 + 墨阶标题，无实底无投影。 */
 @Composable
