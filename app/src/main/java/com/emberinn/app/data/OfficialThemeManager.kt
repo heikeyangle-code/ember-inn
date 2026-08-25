@@ -185,9 +185,11 @@ class OfficialThemeManager(private val context: Context) {
             if (STYLE_PACK_FILE !in listing) StylePack()
             else StylePack(
                 enabled = true,
-                href = "/$dir/$STYLE_PACK_FILE",
-                extensionHref = if (EXTENSION_CSS_FILE in listing) "/$dir/$EXTENSION_CSS_FILE" else null,
-                varsJson = presetVarsFromAssets(dir),
+                // 内置包必须走 /assets/ 前缀——WebViewAssetLoader 只注册了该 handler，
+                // 此前 "/themes/..." 直连 404 → style.css 从未加载 → 应用 Moonlit 无任何视觉变化
+                href = "/assets/$dir/$STYLE_PACK_FILE",
+                extensionHref = if (EXTENSION_CSS_FILE in listing) "/assets/$dir/$EXTENSION_CSS_FILE" else null,
+                varsJson = mergePackVarOverrides(presetVarsFromAssets(dir)),
             )
         } else {
             val dir = File(loc.path).parentFile ?: return StylePack()
@@ -198,9 +200,35 @@ class OfficialThemeManager(private val context: Context) {
                 href = "$STYLE_PACK_HREF_IMPORTED$STYLE_PACK_FILE",
                 extensionHref = File(dir, EXTENSION_CSS_FILE).takeIf { it.exists() }
                     ?.let { "$STYLE_PACK_HREF_IMPORTED$EXTENSION_CSS_FILE" },
-                varsJson = presetVarsFromDir(dir),
+                varsJson = mergePackVarOverrides(presetVarsFromDir(dir)),
             )
         }
+    }
+
+    /**
+     * 主题包变量微调（Moonlit preset 26 项等）：覆盖层存 SharedPreferences，
+     * 与 bundled/imported preset 合并后作为 varsJson 下发；改即重算 currentStylePack
+     * → ChatScreen collectAsState → 内核 applyStylePack 广播，即时生效。
+     */
+    private val packVarPrefs get() = context.getSharedPreferences("style_pack_vars", Context.MODE_PRIVATE)
+
+    fun updateStylePackVar(key: String, value: String) {
+        packVarPrefs.edit().putString(key, value).apply()
+        _currentStylePack.value = detectStylePack()
+    }
+
+    fun resetStylePackVars() {
+        packVarPrefs.edit().clear().apply()
+        _currentStylePack.value = detectStylePack()
+    }
+
+    private fun mergePackVarOverrides(base: String?): String? {
+        val overrides = packVarPrefs.all.mapValues { it.value.toString() }
+        if (overrides.isEmpty()) return base
+        val baseObj = base?.let { parseOrNull(it) as? JsonObject } ?: JsonObject(emptyMap())
+        val merged = baseObj.toMutableMap()
+        overrides.forEach { (k, v) -> merged[k] = JsonPrimitive(v) }
+        return JsonObject(merged).toString()
     }
 
     /** 内置预设包 vars：目录内首个含 settings 对象的 *-preset.json → 原样序列化 */

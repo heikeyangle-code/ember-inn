@@ -425,6 +425,7 @@ private fun ThemeTuneGroup() {
 
     val fastUi = boolVal("fast_ui_mode", true)
     val noShadows = boolVal("noShadows", false)
+    val stylePack by manager.currentStylePack.collectAsState()
 
     PreferenceGroup {
         GroupLabel("消息布局与头像")
@@ -435,6 +436,21 @@ private fun ThemeTuneGroup() {
                     selected = numVal("chat_display", 0.0).toInt() == v,
                     onClick = { setInt("chat_display", v) },
                 )
+            }
+        }
+        // Moonlit Echoes 扩展布局（chat_display 3..7 → echostyle 等 body 类）：
+        // 仅样式包在位时提供入口——CSS 未加载时这些类无样式，选择无意义
+        if (stylePack.enabled) {
+            Spacer(Modifier.height(8.dp))
+            GroupLabel("Moonlit 消息样式（扩展布局）")
+            ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+                listOf(3 to "Echo", 4 to "Whisper", 5 to "Hush", 6 to "Ripple", 7 to "Tide").forEach { (v, label) ->
+                    EmberChip(
+                        label = label,
+                        selected = numVal("chat_display", 0.0).toInt() == v,
+                        onClick = { setInt("chat_display", v) },
+                    )
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -541,6 +557,56 @@ private fun ThemeTuneGroup() {
     Spacer(Modifier.height(10.dp))
 
     ColorCssGroup(obj)
+    StylePackVarGroup()
+}
+
+/**
+ * 主题包变量微调（Moonlit Echoes preset 26 项等）：当前样式包在位时展示。
+ * 值逐键透传内核（键 → --CSS 自定义属性，官方扩展 settings 的 CSS 消费子集）；
+ * 布尔值开关、颜色/尺寸/时长等字符串文本输入（rgba(...)/%/px/s 原样生效）。
+ * 覆盖层 SharedPreferences 存储（与 preset 合并下发），恢复默认一键清空回 preset。
+ */
+@Composable
+private fun StylePackVarGroup() {
+    val context = LocalContext.current
+    val manager = remember(context) { OfficialThemeManager.shared(context) }
+    val stylePack by manager.currentStylePack.collectAsState()
+    if (!stylePack.enabled) return
+    val vars = remember(stylePack.varsJson) {
+        runCatching { Json.parseToJsonElement(stylePack.varsJson ?: "{}").jsonObject }.getOrNull()
+    } ?: return
+
+    PreferenceGroup {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            GroupLabel("主题包变量（Moonlit preset，即时生效）")
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = { manager.resetStylePackVars() }) { Text("恢复默认") }
+        }
+        vars.forEach { (key, valueEl) ->
+            val value = (valueEl as? JsonPrimitive)?.contentOrNull ?: valueEl.toString()
+            if (value == "true" || value == "false") {
+                SwitchPrefRow(key, "布尔开关（透传 --$key）", value == "true") {
+                    manager.updateStylePackVar(key, if (it) "true" else "false")
+                }
+            } else {
+                var draft by remember(key, value) { mutableStateOf(value) }
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    label = { Text(key) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    trailingIcon = {
+                        if (draft != value) {
+                            TextButton(onClick = { manager.updateStylePackVar(key, draft) }) { Text("应用") }
+                        }
+                    },
+                )
+            }
+        }
+    }
 }
 
 /** 颜色十项 + 自定义 CSS：官方主题颜色类字段的调节入口（hex 文本，点应用写回主题）。 */
