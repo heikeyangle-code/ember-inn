@@ -254,7 +254,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 - 行内编辑接线：原生编辑对话框退役——菜单「编辑」与 onTextClick(click_to_edit) 一律 kernelPool.acquireSingle{beginEditMessage("m-$index")}；uiAction 分支 mes_edit_save/delete/move/copy、mes_reasoning_add/save、mes_img_swipe(refresh=false)、mes_media_delete 全部落 vm
 - Show more 接线：uiAction show_more_messages → 按 truncation 切批 messagePayloadOf → prependMessages(batch) + vm.extendHistoryWindow(batch 大小)
 
-## 5. App/UI 进度（V2 重构中）
+## 5. App/UI 进度（V2 重构中 + V3 壳层重构阶段 1-16 已落）
 
 ### 5.1 已完成（新架构）
 - renderer/ 五类（§4.4）+ OfficialThemeManager（§4.5）
@@ -280,6 +280,21 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 - **本地外观偏好收敛（官方字段全删）**：AppearancePrefs 删除 st_ 九色（main/em/underline/quote/user·bot bubble/border/shadow/blur_tint）、排版 11 字段（textSize/lineHeight/headingStyle/bodyWeight/headingH1/H2/quoteItalic/codeSize/inlineCodeSize/blockSpacing/listIndent）、avatarShape、文字阴影开关与强度——全部由官方主题接管。消费方改读真值：气泡/流式着色取 ShellTheme 令牌，正文样式 chatTextStyle() 单一 font_scale 缩放，头像形状读 shellSettings().avatarStyle（0圆/1大矩形/2方2px/3圆角10px）。保留项均为壳层自有或官方 power_user 行为旗标（radius/font/immersiveActions/bubbleStyle/density/backgroundBlur/openLastChat/encodeTags/fixMarkdown/chatBg*/blurStrength）。MessageRenderScreen 颜色编辑页删除，只留行为与兼容
 
 ### 5.2 待办（当前优先级）
+
+**V3 壳层重构（Premium Editorial × AI Companion）剩余未完项**（阶段 1-16 已全部落地，
+总案见 [docs/UI_REDESIGN_V3.md](UI_REDESIGN_V3.md)；编译绿 + App 单测 53/53 绿）：
+1. **第 16 阶段剩余 Polish（未做）**：
+   - Typography 全局审计——壳层各屏散落 fontSize/sp 逐个收进类型比例（Display 32/Title 18/Body 14/13/Meta 11）
+   - 动效一致性走查——页面转场与 Sheet 弹簧参数统一走 rememberEmberSpring
+   - Reduced Motion 跟随 Android 系统动画关闭（当前只有官方主题 reduced_motion 字段 + 壳层 motion_level 档位）
+2. **第 17 阶段完整回归测试（未做）**：
+   - `:app:assembleDebug` 走一遍（本机只跑了 compileDebugKotlin）
+   - 内核金测试 5 套件（scripts/kernel-golden，309 例）重跑
+   - 2.2 审计表逐项人工核对（V3 文档 §2.2/§2.2.1/§2.2.2）+ 三空间视觉验收 + 宽屏双栏/中屏限宽/角色库 List-Detail 真机过一遍
+   - 设置深链、全域搜索、导入导出回归
+3. V3 已落要点（速查）：三空间壳（FloatHub 四目的地）；书架排序 11 档/标签筛选/网格⇄列表（char_list_grid）；群聊生成队列条（show_group_chat_queue）；角色主页 CharacterHomeScreen + 编辑器分离；聊天 Context 胶囊；设置 IA 官方 8 分区 + 全域搜索目录；BehaviorPrefs 35 字段全链路核销（见 V3 文档 §2.2.2 表）；自适应三档（<600 单栏 / 600-840 限宽 600dp / ≥840 导航轨 + List-Detail，windowWidthClass() 自实现）；壳层个性化三键（shell_density/motion_level/home_style）；主题切换 lerp 400ms（EmberColors.lerpTo）。
+
+**V2 渲染链既有待办（仍有效）**：
 1. **聊天页整页壳（用户已拍板的方向终点）**：聊天屏整体交一个 WebView 承载官方 #top-bar/#sheld/#chat/#form_sheld 全套层级——主题包对顶栏/输入栏/背景的规则直接生效，接缝类 bug（薄空隙/裁剪/度量漂移）连根消失；池化与高度契约机器退役（单实例）。总纲（用户指令）：**官方渲染一律直拷官方源文件，内核 JS 只做薄胶水；桥接以稳定+兼容为最高准则；架构留扩展缝。**
    分期：
    - ✅ C1 已落：render.js 拆 mountMessage（模板就绪后同步挂载）+ renderChat 全量同步（清空重建保序，幂等）+ scrollToBottom + watchChatScroll 节流回报 {type:'chatScroll',atBottom}（距底 40px 容差）；Kernel.clear 委托共享 clearMessages；kernel.html 增 body.fullchat 模式块（恢复官方 #sheld fixed/#chat overflow-y:auto 滚动语义，声明序压过嵌入态覆盖）；桥协议 KernelEvent.atBottom + CHAT_SCROLL，池侧 chatScrollListeners 扇出。金测试 239 绿

@@ -192,7 +192,27 @@ Meta 11sp + letterSpacing 0.8sp。间距律：页缘 20dp · 组间 28dp · 组�
 - 海报墙 `GridCells.Fixed(2)` → `Adaptive(160dp)`：手机仍双列瀑布，宽屏自动加密列数
   ——海报尺寸不随窗口拉宽（"不把手机 UI 拉宽"红线）。
 
-## 六、个性化（第 15 阶段，只影响 App Shell）
+## 六、App Shell 个性化（第 15 阶段，已实施）
+
+- AppearancePrefs 新增三键（只影响壳层，Chat Theme 不动）：`shell_density`
+  （comfortable/compact）、`motion_level`（full/reduced）、`home_style`（editorial/minimal）。
+- 令牌接线：`spacingForDensity` → EmberSpacing（RailHeader 组距 / 今晚页页缘 / 全部设置屏
+  `settingsPagePadding()` 统一替换 8 屏硬编码 20dp）；`motionForLevel` → EmberMotion
+  （Overlays/Motion/Editorial 既有消费链直接生效）。
+- 首页两形态：editorial=时钟弱墨+问候 Display+英雄卡+收藏轨道+角色轨道+时间线；
+  minimal=合并头+英雄紧凑卡+单轨道（AppearanceBus revision 即时切换）。
+- 外观页新增「个性化」组：界面密度/动效/首页形态 ChipRow。
+
+## 七、Motion Polish（第 16 阶段，已实施）
+
+- 主题切换 lerp 400ms（审计表最后一项遗留）：`EmberColors.lerpTo` 全套 20 令牌插值，
+  MainActivity LaunchedEffect 驱动 animate(0→1)；官方 reduced_motion 或壳层动效减弱档
+  自动降为 80ms 近似瞬切。
+- 剩余（未做）：Typography 全局审计（散落 fontSize 统一为类型比例）、
+  动效一致性走查（页面转场/Sheet 弹簧参数统一）、Reduced Motion 系统设置跟随
+  （当前仅官方主题字段 + 壳层档位，未接 Android 系统动画关闭）。
+
+## 六、个性化（第 15 阶段，只影响 App Shell）——已由 §六（上文实施记录）覆盖，此为原规划留档
 
 AppearancePrefs 扩展（Chat Theme 独立不受影响）：
 - 已有：radius 四档 / font 三选
