@@ -289,15 +289,14 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
    MainActivity 读 ANIMATOR_DURATION_SCALE==0 并入 reducedMotion 三根判定线；
    动效一致性=EmberMotion 四档时长令牌（pageMs 页面转场 / sheetMs 弹层 /
    controlMs 微交互 / reducedMs 减动画），DestContent 目的地切换 AnimatedContent
-   fade+上滑走 pageMs（减动画降级纯 fade），ShellKit 开关滑块/FloatHub 展开、
-   Editorial AccordionGroup、Onboarding 分段入场全部归档；保留值均有据：
+   fade+上滑走 pageMs（减动画降级纯 fade），ShellKit 开关滑块、Editorial AccordionGroup、Onboarding 分段入场全部归档；保留值均有据：
    toastr 250ms=官方对齐、呼吸光 1600ms=规格、主题 lerp 400/80ms=V3 规格。
 2. **第 17 阶段回归 ✅ 机检全过，剩真机人工项**：内核金测试 jsdom 四套件
    25+155+74+55=309 例全绿（2026-08-25 本机）；CI compileDebugKotlin +
    assembleDebug + 单测随本次 push 验证。真机人工验收（用户执行）：三空间
    视觉特性成立、宽屏双栏/中屏限宽/角色库 List-Detail、设置深链、全域搜索、
    导入导出回归。
-3. V3 已落要点（速查）：三空间壳（FloatHub 四目的地）；书架排序 11 档/标签筛选/网格⇄列表（char_list_grid）；群聊生成队列条（show_group_chat_queue）；角色主页 CharacterHomeScreen + 编辑器分离；聊天 Context 胶囊；设置 IA 官方 8 分区 + 全域搜索目录；BehaviorPrefs 35 字段全链路核销（见 V3 文档 §2.2.2 表）；自适应三档（<600 单栏 / 600-840 限宽 600dp / ≥840 导航轨 + List-Detail，windowWidthClass() 自实现）；壳层个性化三键（shell_density/motion_level/home_style）；主题切换 lerp 400ms（EmberColors.lerpTo）。
+3. V3 已落要点（速查）：三空间壳（EmberBottomNav 底部导航四目的地，宽屏 HubRail 轨）；书架排序 11 档/标签筛选/网格⇄列表（char_list_grid）；群聊生成队列条（show_group_chat_queue）；角色主页 CharacterHomeScreen + 编辑器分离；聊天 Context 胶囊；设置 IA 官方 8 分区 + 全域搜索目录；BehaviorPrefs 35 字段全链路核销（见 V3 文档 §2.2.2 表）；自适应三档（<600 单栏 / 600-840 限宽 600dp / ≥840 导航轨 + List-Detail，windowWidthClass() 自实现）；壳层个性化三键（shell_density/motion_level/home_style）；主题切换 lerp 400ms（EmberColors.lerpTo）。
 
 **V2 渲染链既有待办（仍有效）**：
 1. **聊天页整页壳（用户已拍板的方向终点）**：聊天屏整体交一个 WebView 承载官方 #top-bar/#sheld/#chat/#form_sheld 全套层级——主题包对顶栏/输入栏/背景的规则直接生效，接缝类 bug（薄空隙/裁剪/度量漂移）连根消失；池化与高度契约机器退役（单实例）。总纲（用户指令）：**官方渲染一律直拷官方源文件，内核 JS 只做薄胶水；桥接以稳定+兼容为最高准则；架构留扩展缝。**

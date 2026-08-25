@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -317,12 +316,11 @@ fun CharactersScreen(
             }
         }
 
-        // 导入圆粒：与 FloatHub 同语言
+        // 导入圆粒：内容面 + 发丝缘（系统条高度由外层导航栏/宽屏包装负责）
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 20.dp)
-                .navigationBarsPadding()
                 .padding(bottom = 14.dp)
                 .size(48.dp)
                 .clip(CircleShape)

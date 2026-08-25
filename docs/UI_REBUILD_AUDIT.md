@@ -26,11 +26,11 @@
 | 条目 | 状态 | 证据 |
 |---|---|---|
 | 废三域 Tab + NavigationRail | ✅ | MainScreen 推倒（dea1fabf） |
-| 右下悬浮主钮 + 四项竖栈 | ✅ | FloatHub |
-| 长按主钮=全域搜索面板 | ⬜ | 待做（GlobalSearch 组件未建） |
+| 底部导航栏四目的地 | ✅ | EmberBottomNav（替代初版 FloatHub） |
+| 全域搜索面板 | ⬜ | 待做（GlobalSearch 组件未建；导航栏内无搜索钮） |
 | 边缘横滑切页 | 🟡 | SwipeBack 存在但切页手势未接到目的地切换 |
 | 平板左缘轨+双栏 | ✅ | HubRail |
-| 聊天页主钮隐藏 | ✅ | ChatScreen 早退路径不组合壳层 |
+| 聊天页不组合壳层导航 | ✅ | ChatScreen 早退路径不组合壳层 |
 
 ## 四、逐屏布局
 

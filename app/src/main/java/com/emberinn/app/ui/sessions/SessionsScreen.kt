@@ -214,7 +214,7 @@ fun SessionsScreen(
             }
         }
 
-        // 新建对话圆粒：与 FloatHub 同语言（内容面 + 发丝缘）
+        // 新建对话圆粒：内容面 + 发丝缘
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)

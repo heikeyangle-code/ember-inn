@@ -47,7 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.data.OnboardingPrefs
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.ui.design.EmberTheme
-import com.emberinn.app.ui.design.components.FloatHub
+import com.emberinn.app.ui.design.components.EmberBottomNav
 import com.emberinn.app.ui.design.components.HubItem
 import com.emberinn.app.ui.home.HomeViewModel
 import com.emberinn.app.ui.home.TonightScreen
@@ -192,7 +192,8 @@ fun MainScreen() {
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxHeight(),
+                            .fillMaxHeight()
+                            .navigationBarsPadding(),
                     ) {
                         com.emberinn.app.ui.home.CharactersScreen(
                             onOpenChat = { session ->
@@ -278,7 +279,8 @@ fun MainScreen() {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .navigationBarsPadding(),
                 ) {
                     DestContent(
                         selected = selectedDest,
@@ -341,7 +343,7 @@ fun MainScreen() {
 
     val widthClass = com.emberinn.app.ui.design.windowWidthClass()
     if (widthClass == com.emberinn.app.ui.design.WindowWidth.EXPANDED) {
-        // 展开屏无聊天：导航轨常驻（§五），不叠 FloatHub；搜索经轨顶放大镜
+        // 展开屏无聊天：导航轨常驻（§五），不叠底部导航栏；搜索经轨顶放大镜
         Row(modifier = Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
             HubRail(
                 selected = selectedDest,
@@ -352,7 +354,8 @@ fun MainScreen() {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .statusBarsPadding(),
+                    .statusBarsPadding()
+                    .navigationBarsPadding(),
             ) {
                 DestContent(
                     selected = selectedDest,
@@ -376,15 +379,34 @@ fun MainScreen() {
         return
     }
     Box(Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
-        Box(Modifier.fillMaxSize().statusBarsPadding()) {
-            if (widthClass == com.emberinn.app.ui.design.WindowWidth.MEDIUM) {
-                // 中屏（600-840dp，§五）：内容最大宽 600dp 居中，导航同紧凑（FloatHub）
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .widthIn(max = 600.dp)
-                        .align(Alignment.Center),
-                ) {
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            Box(Modifier.weight(1f)) {
+                if (widthClass == com.emberinn.app.ui.design.WindowWidth.MEDIUM) {
+                    // 中屏（600-840dp，§五）：内容最大宽 600dp 居中，导航同紧凑
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .widthIn(max = 600.dp)
+                            .align(Alignment.Center),
+                    ) {
+                        DestContent(
+                            selected = selectedDest,
+                            homeVm = homeVm,
+                            onOpenChat = { session ->
+                                openSession(session.id)
+                                openName = session.name
+                            },
+                            onOpenSettings = { route ->
+                                selectedDest = 3
+                                if (route != null) settingsDeepLink = route
+                            },
+                            onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
+                            settingsDeepLink = settingsDeepLink,
+                            onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+                            onSelectDestination = { selectedDest = it },
+                        )
+                    }
+                } else {
                     DestContent(
                         selected = selectedDest,
                         homeVm = homeVm,
@@ -402,43 +424,21 @@ fun MainScreen() {
                         onSelectDestination = { selectedDest = it },
                     )
                 }
-            } else {
-                DestContent(
-                    selected = selectedDest,
-                    homeVm = homeVm,
-                    onOpenChat = { session ->
-                        openSession(session.id)
-                        openName = session.name
-                    },
-                    onOpenSettings = { route ->
-                        selectedDest = 3
-                        if (route != null) settingsDeepLink = route
-                    },
-                    onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
-                    settingsDeepLink = settingsDeepLink,
-                    onSettingsDeepLinkConsumed = { settingsDeepLink = null },
-                    onSelectDestination = { selectedDest = it },
-                )
             }
+            // 底部导航栏（用户拍板替换悬浮主钮）：布局流内占位不遮内容；
+            // 屏内锚底按钮（对话页新建粒/书架导入粒）自然落在栏上方
+            EmberBottomNav(
+                items = Destinations.map { HubItem(it.label, it.icon) },
+                selected = selectedDest,
+                onSelect = { selectedDest = it },
+            )
         }
-        // 悬浮主钮浮在内容上（§三范式）：静默圆粒 + 展开竖栈；长按=全域搜索
-        FloatHub(
-            items = Destinations.map { HubItem(it.label, it.icon) },
-            selected = selectedDest,
-            onSelect = { selectedDest = it },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 14.dp),
-            onLongPress = { showGlobalSearch = true },
-        )
 
         searchOverlay()
     }
 }
 
-/** 平板左缘导航轨：与 FloatHub 同一目的地集合；顶部放大镜=全域搜索。 */
+/** 平板左缘导航轨：与 EmberBottomNav 同一目的地集合；顶部放大镜=全域搜索。 */
 @Composable
 private fun HubRail(selected: Int, onSelect: (Int) -> Unit, onSearch: () -> Unit) {
     val c = EmberTheme.colors

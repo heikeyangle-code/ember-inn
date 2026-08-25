@@ -2,18 +2,16 @@
 
 package com.emberinn.app.ui.design.components
 
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +24,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -34,12 +31,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -530,80 +526,73 @@ fun SheetRow(
     }
 }
 
-/** 导航栈条目（FloatHub 内部用）。 */
+/** 导航条目（EmberBottomNav 用）。 */
 data class HubItem(val label: String, val icon: ImageVector)
 
 /**
- * 悬浮主钮 + 四项竖栈（§三导航范式）：静默时只是右下角一枚圆粒，
- * 点开向上弹出玻璃小栈；当前项强调色标记。聊天页由调用方决定隐藏。
+ * 底部导航栏：四目的地常驻（用户拍板替换悬浮主钮——单手难用且压屏内按钮）。
+ * 在布局流内占位，内容区自然让位，不遮挡任何屏内操作；只做导航不加其它按钮。
+ * 玻璃底=bg 半透明+顶部发丝缘；当前项=弱强调胶囊+强调色字，色变走 controlMs。
  */
 @Composable
-fun FloatHub(
+fun EmberBottomNav(
     items: List<HubItem>,
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    onLongPress: (() -> Unit)? = null,
 ) {
     val c = EmberTheme.colors
-    val revealMs = EmberTheme.motion.controlMs
-    var open by remember { mutableStateOf(false) }
-    Column(modifier = modifier, horizontalAlignment = Alignment.End) {
-        AnimatedVisibility(
-            visible = open,
-            enter = fadeIn(tween(revealMs)) + expandVertically(expandFrom = Alignment.Bottom, animationSpec = tween(revealMs)),
-            exit = fadeOut(tween(revealMs)) + shrinkVertically(shrinkTowards = Alignment.Bottom, animationSpec = tween(revealMs)),
+    val ms = EmberTheme.motion.controlMs
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawBehind {
+                drawLine(
+                    c.line,
+                    Offset.Zero,
+                    Offset(size.width, 0f),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            }
+            .background(c.bg.copy(alpha = 0.94f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(62.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            ThemeSurface(ShellFace.Content, corner = 18.dp, hairline = true, modifier = Modifier.padding(bottom = 10.dp)) {
-                Column(Modifier.padding(vertical = 6.dp)) {
-                    items.forEachIndexed { index, item ->
-                        val active = selected == index
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .widthIn(min = 148.dp)
-                                .clickable {
-                                    onSelect(index)
-                                    open = false
-                                }
-                                .padding(horizontal = 18.dp, vertical = 11.dp),
-                        ) {
-                            Icon(
-                                item.icon,
-                                contentDescription = item.label,
-                                tint = if (active) c.accent else c.inkMute,
-                                modifier = Modifier.size(17.dp),
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                item.label,
-                                color = if (active) c.accent else c.ink,
-                                fontSize = EmberTheme.typo.body.fontSize,
-                                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                            )
-                        }
-                    }
+            items.forEachIndexed { index, item ->
+                val active = selected == index
+                val tint by animateColorAsState(
+                    targetValue = if (active) c.accent else c.inkMute,
+                    animationSpec = tween(ms),
+                    label = "navTint",
+                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(vertical = 7.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (active) c.accent.copy(alpha = 0.09f) else Color.Transparent)
+                        .clickable { onSelect(index) },
+                ) {
+                    Icon(item.icon, contentDescription = item.label, tint = tint, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        item.label,
+                        color = tint,
+                        fontSize = EmberTheme.typo.meta.fontSize,
+                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1,
+                    )
                 }
             }
         }
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(c.surface.copy(alpha = 0.96f))
-                .border(1.dp, c.lineStrong, CircleShape)
-                .combinedClickable(
-                    onClick = { open = !open },
-                    onLongClick = { open = false; onLongPress?.invoke() },
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                if (open) FaIcons.XMark else FaIcons.Bars,
-                contentDescription = if (open) "收起导航" else "打开导航",
-                tint = c.ink,
-                modifier = Modifier.size(17.dp),
-            )
-        }
+        Spacer(Modifier.navigationBarsPadding())
     }
 }
