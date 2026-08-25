@@ -63,7 +63,6 @@ import com.emberinn.app.ui.design.components.SectionTitle
 import com.emberinn.app.ui.design.components.SurfaceCard
 import com.emberinn.app.ui.design.components.EmberChip
 import com.emberinn.app.ui.design.components.ChipRow
-import com.emberinn.app.ui.design.components.EmberBottomSheet
 import com.emberinn.app.ui.design.components.SheetRow
 import com.emberinn.app.ui.design.components.SheetRowTone
 import com.emberinn.app.ui.icons.FaIcons
