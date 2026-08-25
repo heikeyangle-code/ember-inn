@@ -1390,10 +1390,11 @@ private fun CollapsibleSection(
             .clickable { expanded = !expanded }
             .padding(top = 18.dp, bottom = 2.dp),
     ) {
-        Text(
-            if (expanded) "▼" else "▶",
-            style = MaterialTheme.typography.labelMedium,
-            color = EmberTheme.colors.lineStrong,
+        Icon(
+            if (expanded) FaIcons.ChevronDown else FaIcons.ChevronRight,
+            contentDescription = null,
+            tint = EmberTheme.colors.inkMute,
+            modifier = Modifier.size(13.dp),
         )
         Spacer(Modifier.width(6.dp))
         Text(
