@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
@@ -160,29 +161,17 @@ object ProtocolSamplerEditors {
                     when (f) {
                         is Num -> {
                             val current = (map[f.key] as? JsonPrimitive)?.contentOrNull ?: ""
-                            EmberTextField(
-                                value = current,
-                                onValueChange = { v ->
+                            ShellInput(value = current, onValueChange = { v ->
                                     map[f.key] = JsonPrimitive(v)
                                     dirty = true
-                                },
-                                label = { Text(f.label) },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                            )
+                                }, label = f.label, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
                         }
                         is Str -> {
                             val current = (map[f.key] as? JsonPrimitive)?.contentOrNull ?: ""
-                            EmberTextField(
-                                value = current,
-                                onValueChange = { v ->
+                            ShellInput(value = current, onValueChange = { v ->
                                     map[f.key] = JsonPrimitive(v)
                                     dirty = true
-                                },
-                                label = { Text(f.label) },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                            )
+                                }, label = f.label, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
                         }
                     }
                 }

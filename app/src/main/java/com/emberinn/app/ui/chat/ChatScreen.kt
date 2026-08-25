@@ -2028,13 +2028,7 @@ fun ChatScreen(
             onDismissRequest = { renameChatTarget = null },
             title = { Text("重命名聊天文件") },
             text = {
-                EmberTextField(
-                    value = renameChatDraft,
-                    onValueChange = { renameChatDraft = it },
-                    singleLine = true,
-                    label = { Text(oldName) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                ShellInput(value = renameChatDraft, onValueChange = { renameChatDraft = it }, singleLine = true, label = oldName, modifier = Modifier.fillMaxWidth())
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -3185,12 +3179,7 @@ fun ChatScreen(
             onDismissRequest = { vm.cancelCaptionFlow() },
             title = { Text("确认图片描述（caption refine_mode）") },
             text = {
-                EmberTextField(
-                    value = editText,
-                    onValueChange = { editText = it },
-                    minLines = 3,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                ShellInput(value = editText, onValueChange = { editText = it }, minLines = 3, modifier = Modifier.fillMaxWidth())
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -4420,7 +4409,7 @@ private fun CfgScaleSheet(
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("分隔符（JSON 字符串）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                EmberTextField(value = separator, onValueChange = { separator = it }, label = { Text("例：\"\\n\"") }, singleLine = true, modifier = Modifier.width(150.dp))
+                ShellInput(value = separator, onValueChange = { separator = it }, label = "例：\"\\n\"", singleLine = true, modifier = Modifier.width(150.dp))
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {

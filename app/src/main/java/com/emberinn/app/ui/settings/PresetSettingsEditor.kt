@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -144,12 +145,7 @@ private fun EditInt(label: String, value: Int, onChange: (Int) -> Unit) {
     // 标签上置、输入框全宽：避免长说明把输入框挤成窄条（“被说明文字压变形”）
     Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
-        EmberTextField(
-            value = value.toString(),
-            onValueChange = { it.toIntOrNull()?.let(onChange) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-        )
+        ShellInput(value = value.toString(), onValueChange = { it.toIntOrNull()?.let(onChange) }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
     }
 }
 

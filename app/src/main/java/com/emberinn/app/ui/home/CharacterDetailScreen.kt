@@ -785,13 +785,7 @@ fun CharacterDetailScreen(
             onDismissRequest = { editingKey = null },
             title = { Text("编辑$label") },
             text = {
-                EmberTextField(
-                    value = fieldDraft,
-                    onValueChange = { fieldDraft = it },
-                    minLines = if (multiline) 3 else 1,
-                    maxLines = if (multiline) 10 else 3,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                ShellInput(value = fieldDraft, onValueChange = { fieldDraft = it }, minLines = if (multiline) 3 else 1, maxLines = if (multiline) 10 else 3, modifier = Modifier.fillMaxWidth())
             },
             confirmButton = {
                 TextButton(onClick = {

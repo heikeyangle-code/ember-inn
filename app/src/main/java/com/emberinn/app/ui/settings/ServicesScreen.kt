@@ -261,14 +261,7 @@ private fun ImageCard() {
                 ComfyWorkflowSection()
             }
         }
-        EmberTextField(
-            value = promptPrefix,
-            onValueChange = { promptPrefix = it; saveAdvanced() },
-            label = { Text("提示词前缀（sd_prompt_prefix）") },
-            minLines = 2,
-            maxLines = 4,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        )
+        ShellInput(value = promptPrefix, onValueChange = { promptPrefix = it; saveAdvanced() }, label = "提示词前缀（sd_prompt_prefix）", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
         ShellInput(
             value = negativePrompt,
             onValueChange = { negativePrompt = it; saveAdvanced() },
@@ -816,26 +809,12 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 
 @Composable
 private fun NumberRow(label: String, value: String, onValueChange: (String) -> Unit) {
-    EmberTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-    )
+    ShellInput(value = value, onValueChange = onValueChange, label = label, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp))
 }
 
 @Composable
 private fun DecimalRow(label: String, value: String, onValueChange: (String) -> Unit) {
-    EmberTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-    )
+    ShellInput(value = value, onValueChange = onValueChange, label = label, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp))
 }
 
 /** 点击行 + DropdownMenu 选择器。 */
@@ -875,13 +854,7 @@ private fun labelOf(options: List<DropdownOption>, value: String): String =
 
 @Composable
 private fun TextFieldRow(label: String, value: String, onValueChange: (String) -> Unit) {
-    EmberTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+    ShellInput(value = value, onValueChange = onValueChange, label = label, singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
 }
 
 @Composable
@@ -892,19 +865,13 @@ private fun KeyRow(
     onValueChange: (String) -> Unit,
     label: String,
 ) {
-    EmberTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        trailingIcon = {
+    ShellInput(value = value, onValueChange = onValueChange, label = label, singleLine = true, visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(), trailing = {
+
             TextButton(onClick = { onVisibleChange(!visible) }) {
                 Text(if (visible) "隐藏" else "显示")
             }
-        },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+        
+}, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
 }
 
 /** 发送行为（官方 oai_settings.send_if_empty：最后一条 AI 且输入为空时发送该文本续聊）。 */

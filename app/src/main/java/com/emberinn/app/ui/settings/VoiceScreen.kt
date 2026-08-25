@@ -444,14 +444,7 @@ private fun KeyRow(
                 Text(if (visible) "隐藏" else "显示")
             }
         }
-        EmberTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label) },
-            singleLine = true,
-            visualTransformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None
-                else androidx.compose.ui.text.input.PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-        )
+        ShellInput(value = value, onValueChange = onValueChange, label = label, singleLine = true, visualTransformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None
+                else androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
     }
 }
