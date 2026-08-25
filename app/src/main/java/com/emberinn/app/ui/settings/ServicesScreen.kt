@@ -48,7 +48,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 private data class DropdownOption(val value: String, val label: String)
 
@@ -779,21 +781,17 @@ private fun VectorCard() {
 
 @Composable
 private fun ServiceCard(title: String, content: @Composable () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-    ) {
-        Column {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                color = EmberTheme.colors.accent,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            )
-            content()
-            Spacer(Modifier.height(6.dp))
-        }
+    // E0 平面分组（DESIGN_SYSTEM §一-1）：组题 + 留白即分隔，无卡片框
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            title.uppercase(),
+            color = EmberTheme.colors.inkMute,
+            fontSize = 11.sp,
+            letterSpacing = 1.6.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(start = 4.dp, top = 24.dp, bottom = 8.dp),
+        )
+        content()
     }
 }
 
