@@ -649,7 +649,7 @@ fun ProviderDetailScreen(
                                     ShellInput(value = entry.value.toString(), onValueChange = { v ->
                                             v.toDoubleOrNull()?.coerceIn(-100.0, 100.0)
                                                 ?.let { vm.updateBiasEntry(presetName, entry.id, value = it) }
-                                        }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.width(84.dp))
+                                        }, label = "权重", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.width(84.dp))
                                     TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = true) }, enabled = index > 0) { Text("↑") }
                                     TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = false) }, enabled = index < entries.lastIndex) { Text("↓") }
                                     TextButton(onClick = { vm.removeBiasEntry(presetName, entry.id) }) { Text("删", color = EmberTheme.colors.danger) }
