@@ -5,7 +5,6 @@ package com.emberinn.app.ui.sessions
 import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as SheetRow
-import com.emberinn.app.ui.components.EmberGlassFab
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.emberGlass
