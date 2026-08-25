@@ -34,77 +34,8 @@ import com.emberinn.app.ui.design.EmberTheme
 /** 菜单行语义色。 */
 enum class SheetRowTone { Neutral, Danger }
 
-/**
- * 底部弹层（§6.1 Sheet）：底部滑入 + 背景压暗 240ms（§七）；surface2 面 + cornerSheet 圆角。
- * 自绘实现，不依赖 M3 experimental API。
- */
-@Composable
-fun ShellSheet(onDismiss: () -> Unit, title: String? = null, content: @Composable ColumnScope.() -> Unit) {
-    val c = EmberTheme.colors
-    val s = EmberTheme.shapes
-    val ms = if (EmberTheme.reducedMotion) EmberTheme.motion.reducedMs else EmberTheme.motion.sheetMs
-    BackHandler(enabled = visible) { onDismiss() }
-    Box(Modifier.fillMaxSize()) {
-        // 背景压暗
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(tween(ms)),
-            exit = fadeOut(tween(ms)),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(c.bgTint.copy(alpha = 0.6f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss,
-                    ),
-            )
-        }
-        // 底部面板
-        AnimatedVisibility(
-            visible = visible,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(ms)) { it } + fadeIn(tween(ms)),
-            exit = slideOutVertically(tween(ms)) { it } + fadeOut(tween(ms)),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 640.dp)
-                    .clip(RoundedCornerShape(topStart = s.cornerSheet, topEnd = s.cornerSheet))
-                    .background(c.surface)
-                    .navigationBarsPadding(),
-            ) {
-                // 拖拽指示条
-                Box(
-                    Modifier
-                        .padding(top = 10.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .height(4.dp)
-                        .widthIn(min = 36.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(c.lineStrong),
-                )
-                if (title != null) {
-                    SectionTitle(
-                        title,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 12.dp),
-                    )
-                }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 18.dp),
-                    content = content,
-                )
-            }
-        }
-    }
-}
+// ShellSheet 统一实现在 ShellKit.kt（此前此处半成品重载与 ShellKit 版同签名冲突，
+// 且引用未定义的 visible 变量——已删除，全局唯一实现避免重载歧义）
 
 /**
  * 居中对话框（§6.1 Dialog）：surface 面浮层，scale 入场。

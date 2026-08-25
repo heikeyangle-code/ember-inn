@@ -27,11 +27,33 @@ data class BehaviorSettings(
     val autoSwipeMinimumLength: Int = 0,
     val autoSwipeBlacklist: Set<String> = emptySet(),
     val autoSwipeBlacklistThreshold: Int = 2,
+    /** 官方 power_user.stream_fade_in（默认关）：流式分词渐显（stream-fadein.js） */
+    val streamFadeIn: Boolean = false,
+    /** 官方 power_user.gestures（默认开）：消息横滑切变体 */
+    val gestures: Boolean = true,
+    /** 官方 power_user.send_on_enter：-1 AUTO / 0 关 / 1 开（移动端 AUTO=不发送） */
+    val sendOnEnter: Int = 0,
+    /** 官方 power_user.quick_continue（默认关）：#mes_continue 快速续写按钮 */
+    val quickContinue: Boolean = false,
+    /** 官方 power_user.quick_impersonate（默认关）：#mes_impersonate 快速冒充按钮 */
+    val quickImpersonate: Boolean = false,
+    /** 官方 power_user.auto_save_msg_edits（默认关）：编辑框失焦自动保存 */
+    val autoSaveEdits: Boolean = false,
+    /** 官方 power_user.chat_truncation（默认 100，滑条 0-1000 step5；0=全部）：
+     *  长聊天初始渲染窗口，超窗顶部挂 show more */
+    val chatTruncation: Int = 100,
+    /** 官方 power_user.streaming_fps（默认 30，滑条 5-100 step5）：流式 tick 更新频率 */
+    val streamingFps: Int = 30,
+    /** 官方 power_user.spoiler_free_mode（默认关）：角色编辑面板隐藏描述/开场白防剧透（点击 peek） */
+    val spoilerFreeMode: Boolean = false,
 )
 
 object BehaviorPrefs {
 
     private const val NAME = "ember_behavior"
+
+    /** 变更总线：save() 时 bump；聊天页按 revision 重读并经 setRuntimeConfig 下发内核 */
+    val revision = kotlinx.coroutines.flow.MutableStateFlow(0)
 
     /** 官方 extension_settings.disabled_attachments：被禁用的附件 URL 列表（attachments 扩展，index.js:168）。 */
     fun disabledAttachments(context: Context): List<String> {
@@ -73,6 +95,15 @@ object BehaviorPrefs {
             autoSwipeMinimumLength = p.getInt("auto_swipe_minimum_length", 0),
             autoSwipeBlacklist = (p.getStringSet("auto_swipe_blacklist", emptySet()) ?: emptySet()).toSet(),
             autoSwipeBlacklistThreshold = p.getInt("auto_swipe_blacklist_threshold", 2),
+            streamFadeIn = p.getBoolean("stream_fade_in", false),
+            gestures = p.getBoolean("gestures", true),
+            sendOnEnter = p.getInt("send_on_enter", 0),
+            quickContinue = p.getBoolean("quick_continue", false),
+            quickImpersonate = p.getBoolean("quick_impersonate", false),
+            autoSaveEdits = p.getBoolean("auto_save_msg_edits", false),
+            chatTruncation = p.getInt("chat_truncation", 100).coerceIn(0, 1000),
+            streamingFps = p.getInt("streaming_fps", 30).coerceIn(5, 100),
+            spoilerFreeMode = p.getBoolean("spoiler_free_mode", false),
         )
     }
 
@@ -98,6 +129,16 @@ object BehaviorPrefs {
             .putInt("auto_swipe_minimum_length", s.autoSwipeMinimumLength)
             .putStringSet("auto_swipe_blacklist", s.autoSwipeBlacklist)
             .putInt("auto_swipe_blacklist_threshold", s.autoSwipeBlacklistThreshold)
+            .putBoolean("stream_fade_in", s.streamFadeIn)
+            .putBoolean("gestures", s.gestures)
+            .putInt("send_on_enter", s.sendOnEnter)
+            .putBoolean("quick_continue", s.quickContinue)
+            .putBoolean("quick_impersonate", s.quickImpersonate)
+            .putBoolean("auto_save_msg_edits", s.autoSaveEdits)
+            .putInt("chat_truncation", s.chatTruncation)
+            .putInt("streaming_fps", s.streamingFps)
+            .putBoolean("spoiler_free_mode", s.spoilerFreeMode)
             .apply()
+        revision.value += 1
     }
 }

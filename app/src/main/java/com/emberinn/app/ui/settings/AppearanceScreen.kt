@@ -87,10 +87,11 @@ fun AppearanceScreen(
     var fontDownloading by remember { mutableStateOf(false) }
     var fontError by remember { mutableStateOf<String?>(null) }
 
-    // 官方主题：导入 / 导出 / 管理（导出、删除收进弹层）
+    // 官方主题：导入 / 导出 / 管理（导出、另存、删除收进弹层）
     var manageSheetFor by remember { mutableStateOf<String?>(null) }
     var pendingExport by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf<String?>(null) }
+    var saveAsSheet by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -244,6 +245,15 @@ fun AppearanceScreen(
                     manageSheetFor = null
                 },
             )
+            // 官方 saveTheme(name)「另存为新主题」（power-user.js L2484）：当前主题克隆+改名存新文件
+            SheetRow(
+                label = "另存为新主题",
+                icon = FaIcons.Copy,
+                onClick = {
+                    saveAsSheet = true
+                    manageSheetFor = null
+                },
+            )
             if (meta != null && !meta.bundled) {
                 SheetRow(
                     label = "删除主题",
@@ -256,6 +266,33 @@ fun AppearanceScreen(
                 )
             }
         }
+    }
+
+    // 另存为新主题：名称输入（官方 callGenericPopup INPUT 同构；空名/重名即拒）
+    if (saveAsSheet) {
+        var newName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { saveAsSheet = false },
+            title = { Text("另存为新主题") },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    singleLine = true,
+                    label = { Text("主题名称") },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ok = official.saveAs(newName)
+                    EmberToasts.show(context, if (ok) "已另存：${newName.trim()}" else "名称为空或已存在")
+                    if (ok) saveAsSheet = false
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { saveAsSheet = false }) { Text("取消") }
+            },
+        )
     }
 
     confirmDelete?.let { name ->

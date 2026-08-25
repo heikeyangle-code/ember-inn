@@ -76,7 +76,8 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
 
     /** C5 官方 onProgressStreaming 同构：原地更新流式行 .mes_text（+可选 .mes_reasoning/.mes_timer），
      *  不重建其余消息节点；节流由调用方控制，流结束走 renderChat 权威同步。
-     *  timer 直写对应官方 script.js L3673-3677（onProgressStreaming 每 chunk 重算 mes_timer）。 */
+     *  走内核 updateStreamingNode 一站式入口：stream_fade_in 分词渐显 + timer 直写
+     *  （官方 script.js L3673-3677 每 chunk 重算 mes_timer）。 */
     fun updateStreaming(
         mesid: String,
         text: String,
@@ -84,21 +85,20 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         timerValue: String? = null,
         timerTitle: String? = null,
     ) {
-        val escaped = jsonEsc(text)
-        val reasoningJs = if (reasoning != null) {
-            val r = jsonEsc(reasoning)
-            "var rd=m.querySelector('.mes_reasoning');if(rd){rd.textContent=$r;}"
-        } else ""
-        val timerJs = if (timerValue != null) {
-            val tv = jsonEsc(timerValue)
-            val tt = if (timerTitle != null) ",tm.title=${jsonEsc(timerTitle)}" else ""
-            "var tm=m.querySelector('.mes_timer');if(tm){tm.textContent=$tv$tt;}"
-        } else ""
-        eval(
-            "(function(){var m=document.querySelector('.mes[mesid=\"$mesid\"]');if(!m)return;" +
-                "var el=m.querySelector('.mes_text');" +
-                "if(el){el.innerHTML=window.Kernel.formatText($escaped,{});}$reasoningJs$timerJs})();",
-        )
+        val js = buildString {
+            append("window.Kernel.updateStreamingNode({mesid:")
+            append(jsonEsc(mesid))
+            append(",text:")
+            append(jsonEsc(text))
+            append(",reasoning:")
+            append(if (reasoning != null) jsonEsc(reasoning) else "null")
+            append(",timerValue:")
+            append(if (timerValue != null) jsonEsc(timerValue) else "null")
+            append(",timerTitle:")
+            append(if (timerTitle != null) jsonEsc(timerTitle) else "null")
+            append("});")
+        }
+        eval(js)
     }
 
     /** 边界3 click_to_edit 桥：宿主判定开关与选区后让内核进入行内编辑（messageEdit 同构） */
@@ -111,6 +111,12 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
      *  必须传原始 JSON 字符串：内核需要全部字段（含开关型），不能经 StTheme 有损转换。 */
     fun applyThemeRaw(themeJson: String) {
         eval("window.Kernel.applyTheme($themeJson);")
+    }
+
+    /** 运行时开关下发（KernelRuntimeConfig JSON）：streamFadeIn/gestures/sendOnEnter/
+     *  quickContinue/quickImpersonate/autoSaveEdits；内核侧即时联动（含 quick 按钮显隐）。 */
+    fun setRuntimeConfig(cfgJson: String) {
+        eval("window.Kernel.setRuntimeConfig($cfgJson);")
     }
 
     /** 官方消息布局模式（bubblechat/documentstyle body 类） */

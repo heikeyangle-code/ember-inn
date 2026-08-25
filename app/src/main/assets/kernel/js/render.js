@@ -27,6 +27,12 @@
         trimSpaces: true,                 // power_user.trim_spaces 默认 true（messageEdit 填充用）
         autoSaveEdits: false,             // power_user.auto_save_msg_edits 默认 false（power-user.js L149）
         externalMediaAllowed: true,       // [EmberInn] 放开模式：外链媒体始终允许
+        // —— 运行时下发（setRuntimeConfig 桥，宿主 BehaviorPrefs 同名键）——
+        streamFadeIn: false,              // power_user.stream_fade_in 默认 false（官方 stream-fadein.js）
+        gestures: true,                   // power_user.gestures 默认 true（消息横滑切变体）
+        sendOnEnter: 0,                   // power_user.send_on_enter：-1 AUTO / 0 关 / 1 开（移动端 AUTO=不发送）
+        quickContinue: false,             // power_user.quick_continue 默认 false（#mes_continue 显隐）
+        quickImpersonate: false,          // power_user.quick_impersonate 默认 false（#mes_impersonate 显隐）
     }, window.KernelConfig || {});
 
     // ------------------------------------------------------------------
@@ -264,6 +270,16 @@
     // ------------------------------------------------------------------
     // 核心格式化管线
     // ------------------------------------------------------------------
+    /** formatText 结果 LRU：showdown+DOMPurify 全管线是重进聊天全量重渲的成本大头，
+     *  同文本（截断/切换/回滚/重进）命中缓存零重算。容量 400 ≈ 4 长聊天楼层量级。 */
+    var formatCache = new Map();
+    var FORMAT_CACHE_MAX = 400;
+
+    function formatCacheKey(mes, opts) {
+        return (opts && opts.isSystem ? 'S' : '') + (opts && opts.isUser ? 'U' : '') +
+            (opts && opts.chName ? '|' + opts.chName : '') + '|' + mes;
+    }
+
     /**
      * 与官方 messageFormatting() 的显示段逐字对齐。
      * @param {string} mes       已经过引擎处理（宏/正则/reasoning）的消息文本
@@ -271,6 +287,122 @@
      * @returns {string} 最终 HTML（可直接注入 .mes_text.innerHTML）
      */
     function formatText(mes, opts) {
+        // 缓存命中：正文/思考块/译文重进全部零成本（流式中间态不进缓存——文本每 tick 都变，
+        // 只在 renderChat 全量同步与 mountMessage 终态时命中）
+        if (mes && mes.length < 200000) {
+            var key = formatCacheKey(mes, opts);
+            if (formatCache.has(key)) {
+                var hit = formatCache.get(key);
+                formatCache.delete(key);
+                formatCache.set(key, hit); // LRU 触底提升
+                return hit;
+            }
+            var result = formatTextUncached(mes, opts);
+            if (formatCache.size >= FORMAT_CACHE_MAX) {
+                formatCache.delete(formatCache.keys().next().value); // 淘汰最旧
+            }
+            formatCache.set(key, result);
+            return result;
+        }
+        return formatTextUncached(mes, opts);
+    }
+
+    // ------------------------------------------------------------------
+    // stream_fade_in（官方 stream-fadein.js 逐字移植 + 轻量 morphdom 语义）
+    // ------------------------------------------------------------------
+    function isSegmenterSupported() {
+        return typeof Intl.Segmenter === 'function';
+    }
+
+    /** 官方 segmentTextInElement：Intl.Segmenter(word) 把文本节点拆 <span class="text_segment">
+     *  （pre/code 内与空白节点跳过）——新插入 span 由官方 CSS 播 300ms fade-in。 */
+    function segmentTextInElement(htmlElement, htmlContent, granularity) {
+        htmlElement.innerHTML = htmlContent;
+        if (!isSegmenterSupported()) { return; }
+        var segmenter = new Intl.Segmenter('en-US', { granularity: granularity || 'word' });
+        var textNodes = [];
+        var walker = document.createTreeWalker(htmlElement, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            var textNode = walker.currentNode;
+            if (textNode.parentElement && textNode.parentElement.closest('pre, code')) { continue; }
+            if (/^\s*$/.test(textNode.data)) { continue; }
+            textNodes.push(textNode);
+        }
+        textNodes.forEach(function (textNode) {
+            var fragment = document.createDocumentFragment();
+            var segments = segmenter.segment(textNode.data);
+            for (var seg of segments) {
+                var span = document.createElement('span');
+                span.innerText = seg.segment;
+                span.className = 'text_segment';
+                fragment.appendChild(span);
+            }
+            textNode.replaceWith(fragment);
+        });
+    }
+
+    /** 轻量 morphdom 子节点 diff：同构节点（tag+class 或文本相等）复用 DOM——
+     *  复用节点动画不重播（官方 morphdom 行为），仅新增 span 播 fade-in。 */
+    function nodesEquivalent(a, b) {
+        if (a.nodeType !== b.nodeType) { return false; }
+        if (a.nodeType === 3) { return a.data === b.data; }
+        return a.tagName === b.tagName && a.className === b.className;
+    }
+
+    function patchChildren(parent, newChildren) {
+        var oldChildren = Array.prototype.slice.call(parent.childNodes);
+        var i = 0;
+        for (; i < newChildren.length; i++) {
+            var o = oldChildren[i], n = newChildren[i];
+            if (o && n && nodesEquivalent(o, n)) {
+                if (o.nodeType === 1) { patchChildren(o, Array.prototype.slice.call(n.childNodes)); }
+            } else if (o) {
+                parent.replaceChild(n, o);
+            } else {
+                parent.appendChild(n); // 新增节点 → 内部 text_segment 播 fade-in
+            }
+        }
+        for (var r = oldChildren.length - 1; r >= i; r--) {
+            if (oldChildren[r].parentNode === parent) { parent.removeChild(oldChildren[r]); }
+        }
+    }
+
+    /** 官方 applyStreamFadeIn：克隆 → 分词 → morphdom。此处等价实现：
+     *  离屏构建新结构（含分词 span），同构前缀复用、差异替换、新增追加。 */
+    function applyStreamFadeIn(messageTextElement, htmlContent) {
+        var tmp = messageTextElement.cloneNode(false);
+        segmentTextInElement(tmp, htmlContent);
+        patchChildren(messageTextElement, Array.prototype.slice.call(tmp.childNodes));
+    }
+
+    /** 流式 tick 内核一站式入口（宿主 RenderKernel.updateStreaming 改走此处）：
+     *  formatTextStreaming → fade-in / innerHTML → reasoning / timer 更新。 */
+    function updateStreamingNode(cfg) {
+        var m = document.querySelector('.mes[mesid="' + cfg.mesid + '"]');
+        if (!m) { return; }
+        var el = m.querySelector('.mes_text');
+        if (el && cfg.text != null) {
+            var html = formatTextUncached(cfg.text, {});
+            if (window.KernelConfig.streamFadeIn && isSegmenterSupported()) {
+                applyStreamFadeIn(el, html);
+            } else {
+                el.innerHTML = html;
+            }
+        }
+        if (cfg.reasoning != null) {
+            var rd = m.querySelector('.mes_reasoning');
+            if (rd) { rd.innerHTML = formatTextUncached(cfg.reasoning, {}); }
+        }
+        if (cfg.timerValue != null) {
+            var tm = m.querySelector('.mes_timer');
+            if (tm) {
+                tm.textContent = cfg.timerValue;
+                if (cfg.timerTitle) { tm.setAttribute('title', cfg.timerTitle); }
+            }
+        }
+    }
+
+    function formatTextUncached(mes, opts) {
         opts = opts || {};
         var isSystem = !!opts.isSystem;
         var isUser = !!opts.isUser;
@@ -363,6 +495,19 @@
 
     function loadTemplate() {
         if (templateCache) { return Promise.resolve(templateCache); }
+        // 单文件 bundle：模板已内联为 <template id="message_template_html">，零 fetch 往返；
+        // 旧多文件路径（fetch official/message-template.html）保留为回退
+        var inline = document.getElementById('message_template_html');
+        if (inline && inline.content) {
+            var el0 = inline.content.querySelector('.mes');
+            if (el0) {
+                var cached = el0.cloneNode(true);
+                cached.removeAttribute('id');
+                cached.classList.remove('template_element');
+                templateCache = cached;
+                return Promise.resolve(templateCache);
+            }
+        }
         return fetch('official/message-template.html')
             .then(function (r) { return r.text(); })
             .then(function (html) {
@@ -378,11 +523,45 @@
     }
 
     /**
+     * 消息指纹（renderChat 增量 diff 依据）：覆盖全部可变渲染字段——
+     * 任一字段变化指纹即变，未变楼层整节点零重渲。
+     */
+    function hashStr(s) {
+        var h = 5381;
+        for (var i = 0; i < s.length; i += Math.max(1, (s.length >> 5) | 0)) {
+            h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+        }
+        return h;
+    }
+
+    function payloadFingerprint(p) {
+        return [p.mesid, p.mes.length, hashStr(p.mes), p.currentSwipe || 0,
+            p.reasoning ? p.reasoning.length + ':' + hashStr(p.reasoning) : '0',
+            p.avatarUrl || '', p.tokenCount == null ? '' : p.tokenCount,
+            p.timerValue || '', p.timestamp || '', p.ghost ? 1 : 0,
+            p.lastInContext ? 1 : 0, (p.media && p.media.length) || 0,
+            p.mediaDisplay || '', p.mediaIndex || 0, p.inlineImage == null ? '' : p.inlineImage,
+            p.title || '', p.smallSysMes ? 1 : 0, p.toolCall ? 1 : 0,
+            p.overswipe || '', p.swipeable == null ? '' : p.swipeable,
+        ].join('~');
+    }
+
+    /**
      * 模板就绪后同步挂载一条消息（官方 script.js addOneMessage 同构）：
      * 填字段 → 思考块 → 追加 #chat → 高度回报与观察 → 点击与长按手势接线。
      */
     function mountMessage(tpl, payload) {
         var chat = document.getElementById('chat');
+        var node = buildMessageNode(tpl, payload);
+        chat.appendChild(node);
+        reportHeight(payload.mesid, node.scrollHeight);
+        observeHeight(node, payload.mesid);
+        return node;
+    }
+
+    /** 构建单条消息节点（不含 append/高度观察）：clone 模板 → 填字段 → 绑定交互。
+     *  renderChat diff ② 路径复用（insertBefore 就地替换变化楼层）。 */
+    function buildMessageNode(tpl, payload) {
         var node = tpl.cloneNode(true);
         // 官方 updateMessageElement 属性面：type/bookmark_link/force_avatar/timestamp/title。
         node.setAttribute('mesid', payload.mesid);
@@ -489,10 +668,8 @@
 
         // 运行时状态缓存：画廊切换 / 行内编辑 / 取消恢复都从这里取最近渲染载荷
         messageState[payload.mesid] = payload;
-
-        chat.appendChild(node);
-        reportHeight(payload.mesid, node.scrollHeight);
-        observeHeight(node, payload.mesid);
+        // 增量 diff 指纹（DOM property：不进 attribute 不污染选择器）
+        node.__fp = payloadFingerprint(payload);
 
         // 点击上报（链接/交互元素由 WebViewClient 外链逻辑处理，这里报宿主决策）
         node.addEventListener('click', function (ev) {
@@ -586,21 +763,75 @@
     }
 
     /**
-     * 全量同步整个聊天（整页壳 C1）：清空重建，payloads 顺序即聊天顺序。
-     * 切聊天 / 首挂载走这里；增量渲染走 renderMessage（模板缓存后两者均同步可用）。
+     * 同步整个聊天（整页壳 C1）——增量 diff 三层：
+     *  ① 楼层序列与指纹全同（重进同会话/流式 tick 收敛）：零 DOM 操作，直接返回；
+     *  ② mesid 序列一致但部分楼层变化（编辑/新楼层/切变体）：只重建变化节点（insertBefore+remove）；
+     *  ③ 序列变化（切换会话/回滚/删除）：清空全量重建（官方 printMessages 语义）。
+     * 官方页签常驻不重渲；App 每次进聊天都 renderChat——diff 是"重进秒开"的核心。
      * opts.showMore：顶部挂 #show_more_messages（边界5 长聊天截断）。
      */
     function renderChat(payloads, opts) {
         return loadTemplate().then(function (tpl) {
+            var chat = document.getElementById('chat');
+            var list = payloads || [];
+            var existing = Array.prototype.filter.call(
+                chat.querySelectorAll(':scope > .mes'),
+                function (n) { return true; },
+            );
+
+            // ② 序列一致性（mesid 逐位相等）——①/② 共用此判定
+            var sameSeq = existing.length === list.length;
+            if (sameSeq) {
+                for (var i = 0; i < list.length; i++) {
+                    if (existing[i].getAttribute('mesid') !== list[i].mesid) { sameSeq = false; break; }
+                }
+            }
+
+            if (sameSeq) {
+                // ① 快路径：指纹全同 → 零 DOM 操作
+                var changed = [];
+                for (var j = 0; j < list.length; j++) {
+                    if (existing[j].__fp !== payloadFingerprint(list[j])) { changed.push(j); }
+                }
+                if (!changed.length) {
+                    syncLastMesClass();
+                    setShowMoreButton(!!(opts && opts.showMore));
+                    return existing[list.length - 1] || null;
+                }
+                // ② 就地重建变化楼层（新节点建好插旧节点前再移除——避免闪烁空档）
+                changed.forEach(function (idx) {
+                    var oldNode = existing[idx];
+                    var fresh = buildMessageNode(tpl, list[idx]);
+                    chat.insertBefore(fresh, oldNode);
+                    if (resizeObserver) { resizeObserver.unobserve(oldNode); }
+                    oldNode.remove();
+                    reportHeight(list[idx].mesid, fresh.scrollHeight);
+                    observeHeight(fresh, list[idx].mesid);
+                });
+                syncLastMesClass();
+                setShowMoreButton(!!(opts && opts.showMore));
+                return lastMesNode();
+            }
+
+            // ③ 全量重建（官方 printMessages 语义）
             clearMessages();
             var last = null;
-            (payloads || []).forEach(function (p) { last = mountMessage(tpl, p); });
-            // 官方 addOneMessage：全量同步后 last_mes 恒为最后一条。
-            Array.prototype.forEach.call(document.querySelectorAll('#chat .mes'), function (n, i, all) {
-                n.classList.toggle('last_mes', i === all.length - 1);
-            });
+            list.forEach(function (p) { last = mountMessage(tpl, p); });
+            syncLastMesClass();
             setShowMoreButton(!!(opts && opts.showMore));
             return last;
+        });
+    }
+
+    function lastMesNode() {
+        var all = document.querySelectorAll('#chat .mes');
+        return all.length ? all[all.length - 1] : null;
+    }
+
+    function syncLastMesClass() {
+        // 官方 addOneMessage：全量同步后 last_mes 恒为最后一条。
+        Array.prototype.forEach.call(document.querySelectorAll('#chat .mes'), function (n, i, all) {
+            n.classList.toggle('last_mes', i === all.length - 1);
         });
     }
 
@@ -842,6 +1073,16 @@
         }
     }
 
+    /** 运行时配置下发（宿主 BehaviorPrefs 全量同步；新实例随 applyPageSetup 重放）：
+     *  cfg 键与 KernelConfig 运行时段一致，缺省键不动当前值。 */
+    function setRuntimeConfig(cfg) {
+        if (!cfg) { return; }
+        ['streamFadeIn', 'gestures', 'sendOnEnter', 'quickContinue', 'quickImpersonate', 'autoSaveEdits'].forEach(function (k) {
+            if (k in cfg) { window.KernelConfig[k] = cfg[k]; }
+        });
+        syncQuickButtons(); // quick_continue/quick_impersonate 按钮即时联动
+    }
+
     // ------------------------------------------------------------------
     // 官方 scrollChatToBottom + scrollLock 逐字语义移植（script.js L2714/L11167）。
     // auto_scroll_chat_to_bottom 官方默认 true；waifuMode 时官方强制锁定。
@@ -946,12 +1187,11 @@
         if (!form || form.dataset.inputBooted) { return; }
         form.dataset.inputBooted = '1';
         // 连接态：EmberInn 恒为已连接（RA_checkOnlineStatus connected 分支 L339-348：
-        // 去 no-connection；send_but/mes_continue/mes_impersonate 去 displayNone）
+        // 去 no-connection；send_but 去 displayNone——mes_continue/mes_impersonate
+        // 显隐改由官方 quick_continue/quick_impersonate 开关经 syncQuickButtons 控制）
         form.classList.remove('no-connection');
-        ['send_but', 'mes_continue', 'mes_impersonate'].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) { el.classList.remove('displayNone'); }
-        });
+        var sendBut = document.getElementById('send_but');
+        if (sendBut) { sendBut.classList.remove('displayNone'); }
         // 控件 → 宿主动作（官方各 click 处理器的桥接等价）
         function on(id, action) {
             var el = document.getElementById(id);
@@ -970,8 +1210,76 @@
             ta.addEventListener('input', function () {
                 bridgeSend({ type: 'inputChanged', text: ta.value });
             });
+            // 官方 send_on_enter 三态（power-user.js L149-162 + index.html #send-on-enter）：
+            // -1 AUTO / 0 关 / 1 开。官方 shouldSendOnEnter：AUTO 在移动端(isMobile)不发送——
+            // App 恒移动端，故 AUTO 等价关。Enter+Shift 换行不受影响。
+            ta.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' || e.shiftKey || e.isComposing) { return; }
+                if (window.KernelConfig.sendOnEnter === 1) {
+                    e.preventDefault();
+                    bridgeSend({ type: 'hostRequest', hostAction: 'chat_send' });
+                }
+            });
         }
-        // #form_sheld 高度回报：原生悬浮附件/快捷回复行动态内边距（CSS px ≈ Compose dp）
+        // quick_continue / quick_impersonate（官方默认 false → displayNone；
+        // initInputArea 此前恒显——改为按官方开关同步，宿主 setRuntimeConfig 联动）
+        syncQuickButtons();
+        // 官方 power_user.gestures（swiped-events 语义）：消息横滑切变体。
+        // 阈值对齐 swiped-events 默认：dx>60px 且 |dy| < dx，300ms 内。
+        initMessageSwipeGestures();
+        // #form_sheld 高度回报（原内联块提出为函数）
+        reportFormSheldHeight();
+    }
+
+    /** 官方 quick_continue/quick_impersonate 按钮显隐（index.html 初始 displayNone + power-user.js 控制） */
+    function syncQuickButtons() {
+        var cont = document.getElementById('mes_continue');
+        var imp = document.getElementById('mes_impersonate');
+        if (cont) { cont.classList.toggle('displayNone', !window.KernelConfig.quickContinue); }
+        if (imp) { imp.classList.toggle('displayNone', !window.KernelConfig.quickImpersonate); }
+    }
+
+    /** 消息横滑切变体（官方 swiped-left/right → swipe_left_right_handler）：
+     *  touchstart/touchend 位移判定，滑动目标 .mes 的 mesid 经 messageAction 桥回宿主。 */
+    function initMessageSwipeGestures() {
+        var chat = document.getElementById('chat');
+        if (!chat || chat.dataset.swipeBound) { return; }
+        chat.dataset.swipeBound = '1';
+        var startX = 0, startY = 0, startT = 0, targetMes = null;
+        chat.addEventListener('touchstart', function (ev) {
+            if (!window.KernelConfig.gestures || ev.touches.length !== 1) {
+                targetMes = null;
+                return;
+            }
+            startX = ev.touches[0].clientX;
+            startY = ev.touches[0].clientY;
+            startT = Date.now();
+            var mes = ev.target.closest ? ev.target.closest('.mes') : null;
+            // 官方仅 swipe 箭头所在消息（可滑=末条 AI 消息）滑动手势生效；生成中不触发
+            targetMes = (mes && !document.body.classList.contains('hideAllSwipeButtons')) ? mes : null;
+        }, { passive: true });
+        chat.addEventListener('touchend', function (ev) {
+            if (!targetMes) { return; }
+            var t = ev.changedTouches[0];
+            var dx = t.clientX - startX, dy = t.clientY - startY;
+            var dt = Date.now() - startT;
+            var mesid = targetMes.getAttribute('mesid');
+            targetMes = null;
+            if (dt > 500 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) { return; }
+            // 边缘手势留给系统返回（SwipeBack 边缘判定在内核无法感知，窄边 24px 放行宿主）
+            var w = window.innerWidth;
+            if (startX < 24 || startX > w - 24) { return; }
+            bridgeSend({
+                type: 'click',
+                mesid: mesid,
+                messageAction: dx < 0 ? 'swipe_left' : 'swipe_right',
+                target: null,
+            });
+        }, { passive: true });
+    }
+
+    /** #form_sheld 高度回报：原生悬浮附件/快捷回复行动态内边距（CSS px ≈ Compose dp） */
+    function reportFormSheldHeight() {
         var sheld = document.getElementById('form_sheld');
         if (sheld && 'ResizeObserver' in window) {
             var reportFormHeight = function () {
@@ -1757,8 +2065,11 @@
 
     window.Kernel = {
         formatText: formatText,          // DOM 黄金对比入口：返回 HTML 字符串
+        formatTextStreaming: formatTextUncached, // 流式 tick 专用：中间态不入 LRU（防洗掉终态缓存）
         renderMessage: renderMessage,    // 生产入口：upsert 单条消息
-        renderChat: renderChat,          // 整页壳 C1：全量同步（清空重建，payloads 有序）
+        renderChat: renderChat,          // 整页壳 C1：增量同步（diff 未变楼层跳过，payloads 有序）
+        updateStreamingNode: updateStreamingNode, // 流式 tick 一站式（含 stream_fade_in 分支）
+        setRuntimeConfig: setRuntimeConfig, // 运行时开关下发（streamFadeIn/gestures/sendOnEnter/quick×2/autoSaveEdits）
         prependMessages: prependMessages, // 边界5：show more 批量前插（按钮锚点+滚动补偿）
         scrollToBottom: scrollToBottom,  // 官方 #chat 滚动接管（C1/C2）
         setDeleteMode: setDeleteMode,

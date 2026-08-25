@@ -17,8 +17,9 @@ object KernelProtocol {
         encodeDefaults = true
     }
 
-    /** 内核资产在 AssetLoader 下的基地址 */
-    const val KERNEL_URL = "https://appassets.androidplatform.net/assets/kernel/kernel.html"
+    /** 内核资产在 AssetLoader 下的基地址（kernel-bundle.html = kernel.html 全资源内联单文件，
+     *  scripts/bundle-kernel.mjs 生成；冷加载 17+ 次资源请求降为 1 次主文档） */
+    const val KERNEL_URL = "https://appassets.androidplatform.net/assets/kernel/kernel-bundle.html"
 
     /** JS 注入名：window.AndroidKernel.postMessage(JSON) */
     const val BRIDGE_NAME = "AndroidKernel"
@@ -114,6 +115,40 @@ data class StTheme(
     @SerialName("custom_css") val customCss: String? = null,
 ) {
     fun toJsonString(): String = KernelProtocol.json.encodeToString(serializer(), this)
+}
+
+/**
+ * 内核运行时开关（window.Kernel.setRuntimeConfig 桥载荷）：
+ * 键与 render.js KernelConfig 运行时段逐字对齐；官方 power_user 默认值。
+ * 宿主 BehaviorPrefs 同名语义映射，聊天页按 revision 全量重发。
+ */
+@Serializable
+data class KernelRuntimeConfig(
+    /** power_user.stream_fade_in：流式分词渐显（官方 stream-fadein.js） */
+    @SerialName("streamFadeIn") val streamFadeIn: Boolean = false,
+    /** power_user.gestures：消息横滑切变体 */
+    val gestures: Boolean = true,
+    /** power_user.send_on_enter：-1 AUTO / 0 关 / 1 开（移动端 AUTO=不发送） */
+    @SerialName("sendOnEnter") val sendOnEnter: Int = 0,
+    /** power_user.quick_continue：#mes_continue 显隐 */
+    @SerialName("quickContinue") val quickContinue: Boolean = false,
+    /** power_user.quick_impersonate：#mes_impersonate 显隐 */
+    @SerialName("quickImpersonate") val quickImpersonate: Boolean = false,
+    /** power_user.auto_save_msg_edits：编辑框失焦自动保存 */
+    @SerialName("autoSaveEdits") val autoSaveEdits: Boolean = false,
+) {
+    fun toJsonString(): String = KernelProtocol.json.encodeToString(serializer(), this)
+
+    companion object {
+        fun fromBehavior(b: com.emberinn.app.ui.settings.BehaviorSettings) = KernelRuntimeConfig(
+            streamFadeIn = b.streamFadeIn,
+            gestures = b.gestures,
+            sendOnEnter = b.sendOnEnter,
+            quickContinue = b.quickContinue,
+            quickImpersonate = b.quickImpersonate,
+            autoSaveEdits = b.autoSaveEdits,
+        )
+    }
 }
 
 /**

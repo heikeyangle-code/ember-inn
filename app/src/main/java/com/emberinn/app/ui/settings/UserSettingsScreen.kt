@@ -116,6 +116,75 @@ fun UserSettingsScreen(
                             hint = "auto_scroll_chat_to_bottom：生成时自动贴底跟随（默认开）",
                             checked = behavior.autoScrollChatToBottom,
                         ) { saveBehavior(behavior.copy(autoScrollChatToBottom = it)) }
+                        UserSwitchRow(
+                            label = "消息滑动手势",
+                            hint = "gestures：消息横滑切换变体（默认开）",
+                            checked = behavior.gestures,
+                        ) { saveBehavior(behavior.copy(gestures = it)) }
+                        UserCycleRow(
+                            label = "回车发送",
+                            hint = "send_on_enter：自动（移动端=不发送）/ 开 / 关（默认自动）",
+                            entries = listOf("自动", "开", "关"),
+                            index = when (behavior.sendOnEnter) {
+                                1 -> 1
+                                0 -> 2
+                                else -> 0
+                            },
+                        ) { idx ->
+                            saveBehavior(
+                                behavior.copy(sendOnEnter = when (idx) {
+                                    1 -> 1
+                                    2 -> 0
+                                    else -> -1
+                                }),
+                            )
+                        }
+                        UserSwitchRow(
+                            label = "快速继续按钮",
+                            hint = "quick_continue：输入区常驻「继续」快捷键（默认关）",
+                            checked = behavior.quickContinue,
+                        ) { saveBehavior(behavior.copy(quickContinue = it)) }
+                        UserSwitchRow(
+                            label = "快速冒充按钮",
+                            hint = "quick_impersonate：输入区常驻「冒充」快捷键（默认关）",
+                            checked = behavior.quickImpersonate,
+                        ) { saveBehavior(behavior.copy(quickImpersonate = it)) }
+                        UserSwitchRow(
+                            label = "自动保存编辑",
+                            hint = "auto_save_msg_edits：编辑框失焦即保存，免点保存钮（默认关）",
+                            checked = behavior.autoSaveEdits,
+                        ) { saveBehavior(behavior.copy(autoSaveEdits = it)) }
+                        UserSwitchRow(
+                            label = "防剧透模式",
+                            hint = "spoiler_free_mode：角色编辑页隐藏描述/开场白，点击可临时查看（默认关）",
+                            checked = behavior.spoilerFreeMode,
+                        ) { saveBehavior(behavior.copy(spoilerFreeMode = it)) }
+                        ShellInput(
+                            value = behavior.chatTruncation.toString(),
+                            onValueChange = { v ->
+                                saveBehavior(
+                                    behavior.copy(
+                                        chatTruncation = v.filter { ch -> ch.isDigit() }.toIntOrNull()?.coerceIn(0, 1000) ?: 100,
+                                    ),
+                                )
+                            },
+                            label = "长聊天截断条数（0-1000 步进 5，官方默认 100；0 = 全部）",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        ShellInput(
+                            value = behavior.streamingFps.toString(),
+                            onValueChange = { v ->
+                                saveBehavior(
+                                    behavior.copy(
+                                        streamingFps = v.filter { ch -> ch.isDigit() }.toIntOrNull()?.coerceIn(5, 100) ?: 30,
+                                    ),
+                                )
+                            },
+                            label = "流式 FPS（5-100 步进 5，官方默认 30）",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
                 item {
@@ -126,6 +195,11 @@ fun UserSettingsScreen(
                             hint = "smooth_streaming：逐字揭示代替整段蹦出（默认关）",
                             checked = behavior.smoothStreaming,
                         ) { saveBehavior(behavior.copy(smoothStreaming = it)) }
+                        UserSwitchRow(
+                            label = "流式渐显",
+                            hint = "stream_fade_in：流式文本分词淡入动画（默认关，依赖 Intl.Segmenter）",
+                            checked = behavior.streamFadeIn,
+                        ) { saveBehavior(behavior.copy(streamFadeIn = it)) }
                         if (behavior.smoothStreaming) {
                             ShellInput(
                                 value = behavior.smoothStreamingSpeed.toString(),
@@ -294,5 +368,42 @@ private fun UserSwitchRow(label: String, hint: String, checked: Boolean, onChang
         }
         Spacer(Modifier.width(10.dp))
         EmberSwitch(checked = checked, onChange = onChange)
+    }
+}
+
+/** 三态循环行（如 send_on_enter：自动/开/关）：点击整行循环切换，右侧显示当前值胶囊 */
+@Composable
+private fun UserCycleRow(
+    label: String,
+    hint: String,
+    entries: List<String>,
+    index: Int,
+    onChange: (Int) -> Unit,
+) {
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onChange((index + 1) % entries.size) }
+            .padding(vertical = 7.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = c.ink, fontSize = 15.sp)
+            Text(hint, color = c.inkMute, fontSize = 12.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(c.surface)
+                .padding(horizontal = 12.dp, vertical = 5.dp),
+        ) {
+            Text(
+                entries.getOrElse(index) { entries.firstOrNull() ?: "" },
+                color = c.ink,
+                fontSize = 13.sp,
+            )
+        }
     }
 }

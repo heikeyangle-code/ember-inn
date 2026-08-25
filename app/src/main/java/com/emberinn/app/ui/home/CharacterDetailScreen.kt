@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.ui.settings.GlobalRegexPrefs
+import com.emberinn.app.ui.settings.BehaviorPrefs
 import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterRegexScript
@@ -87,7 +88,6 @@ import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
-import com.emberinn.app.ui.components.EmberTextField
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.components.EmberSlider
@@ -135,6 +135,10 @@ fun CharacterDetailScreen(
 
     var editingKey by remember { mutableStateOf<String?>(null) }
     var fieldDraft by remember { mutableStateOf("") }
+    // 官方 spoiler_free_mode（power-user.js switchSpoilerMode/peekSpoilerMode）：
+    // 描述/开场白行遮蔽防剧透；点击 peek 临时显示（页面级 toggle，进页重置）
+    val spoilerFree = remember { BehaviorPrefs.load(context).spoilerFreeMode }
+    var spoilerPeeked by remember(record.id) { mutableStateOf(false) }
     var editingEntryIdx by remember { mutableStateOf<Int?>(null) }
     var confirmDeleteEntry by remember { mutableStateOf(false) }
     var addingEntry by remember { mutableStateOf(false) }
@@ -406,7 +410,13 @@ fun CharacterDetailScreen(
                         FieldRow("名字", fields.name) {
                             editingKey = "name"; fieldDraft = fields.name
                         }
-                        FieldRow("描述", fields.description) {
+                        // 官方 spoiler_free_mode：描述/开场白默认遮蔽，点击 peek 临时显示
+                        SpoilerFieldRow(
+                            label = "描述",
+                            value = fields.description,
+                            hidden = spoilerFree && !spoilerPeeked,
+                            onPeek = { spoilerPeeked = true },
+                        ) {
                             editingKey = "description"; fieldDraft = fields.description
                         }
                         FieldRow("性格", fields.personality) {
@@ -415,7 +425,12 @@ fun CharacterDetailScreen(
                         FieldRow("场景", fields.scenario) {
                             editingKey = "scenario"; fieldDraft = fields.scenario
                         }
-                        FieldRow("开场白", fields.firstMes) {
+                        SpoilerFieldRow(
+                            label = "开场白",
+                            value = fields.firstMes,
+                            hidden = spoilerFree && !spoilerPeeked,
+                            onPeek = { spoilerPeeked = true },
+                        ) {
                             editingKey = "first_mes"; fieldDraft = fields.firstMes
                         }
                         FieldRow("示例对话", fields.mesExample) {
@@ -1272,6 +1287,36 @@ private fun FieldRow(label: String, value: String, onClick: () -> Unit) {
             )
         }
         Icon(FaIcons.Pencil, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = EmberTheme.colors.lineStrong)
+    }
+    HorizontalDivider()
+}
+
+/** 官方 spoiler_free_mode 行（power-user.js peekSpoilerMode）：遮蔽态点击只 peek，再点击才进编辑 */
+@Composable
+private fun SpoilerFieldRow(
+    label: String,
+    value: String,
+    hidden: Boolean,
+    onPeek: () -> Unit,
+    onClick: () -> Unit,
+) {
+    if (!hidden) {
+        FieldRow(label, value, onClick)
+        return
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onPeek).padding(vertical = 12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
+            Text(
+                "防剧透已隐藏，点击查看",
+                style = MaterialTheme.typography.bodySmall,
+                color = EmberTheme.colors.lineStrong,
+            )
+        }
+        Icon(FaIcons.EyeSlash, contentDescription = "查看$label", modifier = Modifier.size(18.dp), tint = EmberTheme.colors.lineStrong)
     }
     HorizontalDivider()
 }

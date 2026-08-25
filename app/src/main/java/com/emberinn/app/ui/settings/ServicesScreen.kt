@@ -11,7 +11,6 @@ import com.emberinn.app.data.PromptTemplateStore
 import com.emberinn.app.data.StyleStore
 import com.emberinn.engine.prompt.ImageGenPromptEngine
 import com.emberinn.app.data.GenerationPrefs
-import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape

@@ -88,32 +88,8 @@ fun EmberSlider(
     )
 }
 
-/**
- * README UI 质感升级：高级底部栏（全局替换 ModalBottomSheet）。
- * 顶部 28dp 大圆角 + 拖拽把手 + 低对比表面，弹层更精致；交互语义不变。
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ShellSheet(onDismiss = : () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        modifier = modifier,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = EmberTheme.colors.surface,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 12.dp, bottom = 4.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(EmberTheme.colors.line.copy(alpha = 0.65f)),
-            )
-        },
-        content = content,
-    )
-}
+// ShellSheet 统一实现在 ui/design/components/ShellKit.kt
+//（此前此处半成品签名 onDismiss = : () -> Unit 非法 + 引用未定义变量——已删除）
 
 /**
  * 高级主按钮（全局替换 M3 Button）：主色渐变 + 彩色投影 + 大圆角胶囊，

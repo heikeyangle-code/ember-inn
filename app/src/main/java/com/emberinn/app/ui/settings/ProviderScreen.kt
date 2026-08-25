@@ -76,7 +76,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ProviderIcon
-import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.engine.provider.ConnectionProfile

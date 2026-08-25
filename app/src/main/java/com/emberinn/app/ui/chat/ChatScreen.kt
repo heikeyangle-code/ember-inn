@@ -124,6 +124,7 @@ import com.emberinn.app.renderer.KernelHostAction
 import com.emberinn.app.renderer.KernelPoolHolder
 import com.emberinn.app.renderer.KernelMessagePayload
 import com.emberinn.app.renderer.KernelProtocol
+import com.emberinn.app.renderer.KernelRuntimeConfig
 import com.emberinn.app.renderer.KernelMediaPayload
 import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.RenderKernel
@@ -134,7 +135,6 @@ import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.design.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.design.EmberTheme
@@ -353,6 +353,15 @@ fun ChatScreen(
     // 样式包（第三方整包 CSS + 可选扩展兼容层）：官方主题 enabled=false，内核侧零污染
     LaunchedEffect(stylePack) {
         kernelPool.updateStylePack(stylePack.enabled, stylePack.href, stylePack.varsJson, stylePack.extensionHref)
+    }
+    // 行为开关下发（BehaviorPrefs → setRuntimeConfig）：首值即推当前配置，
+    // 设置页每次保存 bump revision 自动重发（流式渐显/手势/回车发送/quick 按钮/自动保存编辑）
+    LaunchedEffect(kernelPool) {
+        BehaviorPrefs.revision.collect {
+            kernelPool.updateRuntimeConfig(
+                KernelRuntimeConfig.fromBehavior(BehaviorPrefs.load(context)).toJsonString(),
+            )
+        }
     }
     // ------------------------------------------------------------------------
 
@@ -651,7 +660,9 @@ fun ChatScreen(
     // 对齐：主题 JSON 仅变更时解析一次，重组/流式 tick 零成本。
     val shellThemeJson by themeManager.currentThemeJson.collectAsState()
     val themeShell = remember(shellThemeJson) { themeManager.shellSettings() }
-    val truncation = themeShell.chatTruncation
+    // 官方 chat_truncation 属 power_user（非主题字段）：BehaviorPrefs 持有，设置页滑条实时生效
+    val behaviorRevision by BehaviorPrefs.revision.collectAsState()
+    val truncation = remember(behaviorRevision) { BehaviorPrefs.load(context).chatTruncation }
     val chatFromIndex by remember(truncation) {
         derivedStateOf {
             val windowSize = if (truncation > 0) truncation + historyWindowExtra else Int.MAX_VALUE
@@ -863,7 +874,7 @@ fun ChatScreen(
     // C5 官方流式语义（onProgressStreaming）：只原地更新流式行的 .mes_text/.mes_reasoning，
     // 不重建整个 #chat——每 tick 全量 renderChat 会重挂全部消息节点，图片重载、滚动抖动。
     // 节流 ~120ms；结束后的权威渲染由 messages/isStreaming 变化触发 renderChat 完成。
-    val behaviorSmooth = remember { BehaviorPrefs.load(context) }
+    val behaviorSmooth = remember(behaviorRevision) { BehaviorPrefs.load(context) }
     // 官方 play_message_sound：回复完成提示音（isStreaming 真→假跳变时触发一次）
     var prevStreaming by remember { mutableStateOf(false) }
     LaunchedEffect(isStreaming) {
@@ -872,7 +883,7 @@ fun ChatScreen(
         }
         prevStreaming = isStreaming
     }
-    LaunchedEffect(isStreaming, isImpersonating) {
+    LaunchedEffect(isStreaming, isImpersonating, behaviorSmooth.streamingFps) {
         if (!isStreaming || isImpersonating) return@LaunchedEffect
         var lastPush = 0L
         // 官方 smooth_streaming（sse-stream.js L93-105）：逐字揭示，
@@ -880,20 +891,22 @@ fun ChatScreen(
         // no_think 登记边界：本 App reasoning 走独立通道本就不做字符平滑，开关仅存档。
         var shown = 0L
         var budget = 0L
+        // 官方 streaming_fps（power-user.js L134 默认 30）→ tick 间隔 = 1000/fps
+        val tickMs = (1000 / behaviorSmooth.streamingFps.coerceIn(5, 100)).toLong()
         fun charDelayMs(ch: Char): Long {
             val base = ((100 - behaviorSmooth.smoothStreamingSpeed).coerceIn(1, 100)) * 0.4f
             val v = when (ch) {
                 ',', '\n' -> base * 12.5f
                 '.', '!', '?' -> base * 25f
                 else -> base
-            } / 10f   // 收集节拍为 120ms 级（官方逐字 setTimeout），整体提速一个量级保持手感
+            } / 10f   // 收集节拍为 tickMs 级（官方逐字 setTimeout），整体提速一个量级保持手感
             return v.toLong().coerceAtLeast(1L)
         }
         // StateFlow 本身即 conflate 语义（新值胜出），显式 .conflate() 对 StateFlow 无效且被编译器拒绝
         vm.streamingText.collect { raw ->
             val now = android.os.SystemClock.elapsedRealtime()
             val gap = (now - lastPush).coerceAtLeast(0)
-            if (now - lastPush < 120 && raw.length <= shown) return@collect
+            if (now - lastPush < tickMs && raw.length <= shown) return@collect
             lastPush = now
             val visible = when {
                 !behaviorSmooth.smoothStreaming -> raw.also { shown = it.length.toLong() }
@@ -1068,7 +1081,7 @@ fun ChatScreen(
                 // 时按钮移除。内核侧已做锚点插入+视口内高度差回滚，宿主只扩窗+喂批次载荷。
                 KernelHostAction.SHOW_MORE_MESSAGES -> {
                     val total = messages.size
-                    val tr = themeShell.chatTruncation
+                    val tr = BehaviorPrefs.load(context).chatTruncation
                     val currentFirst = if (total > tr + historyWindowExtra) total - (tr + historyWindowExtra) else 0
                     if (tr > 0 && total > tr && currentFirst > 0) {
                         val newFirst = (currentFirst - tr).coerceAtLeast(0)

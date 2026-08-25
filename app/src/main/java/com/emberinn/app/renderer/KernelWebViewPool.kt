@@ -8,6 +8,7 @@ import androidx.webkit.WebViewAssetLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resumeWithException
@@ -137,6 +138,8 @@ class KernelWebViewPool(
     // 每页主题状态：新建实例 ready 后自动应用；updateTheme/updateStylePack 广播到全部存活实例。
     // bodyClasses 为全量同步语义（含 chat_display 布局类 + app-host-actions 宿主接管标记）。
     @Volatile private var currentThemeJson: String? = null
+    // 运行时开关（BehaviorPrefs → setRuntimeConfig）：同为页面级状态，随 applyPageSetup 重放
+    @Volatile private var currentRuntimeConfigJson: String? = null
     // 整页壳 C2：fullchat 是页面级状态，必须随主题/崩溃重建一起全量同步；
     // app-host-actions 只保留 reasoning 编辑按钮等宿主未接管项的过渡隐藏。
     @Volatile private var currentBodyClasses: List<String> = listOf("fullchat", "app-host-actions")
@@ -151,6 +154,15 @@ class KernelWebViewPool(
         currentBodyClasses = bodyClasses
         scope.launch(Dispatchers.Main) {
             synchronized(all) { all.toList() }.forEach { applyPageSetup(it) }
+        }
+    }
+
+    /** 运行时开关变更入口（ChatScreen 收集 BehaviorPrefs.revision 后调用）：
+     *  广播全部存活实例 + 记为页面状态（新实例/崩溃重建随 applyPageSetup 恢复）。 */
+    fun updateRuntimeConfig(cfgJson: String) {
+        currentRuntimeConfigJson = cfgJson
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.toList() }.forEach { RenderKernel(it).setRuntimeConfig(cfgJson) }
         }
     }
 
@@ -178,8 +190,10 @@ class KernelWebViewPool(
 
     private fun applyPageSetup(instance: PooledWebView) {
         val kernel = RenderKernel(instance)
-        // 顺序契约：先主题变量 → 再布局类 → 最后样式包（整包 CSS 可覆盖前两者，
-        // 与官方「power-user 设置 → 扩展主题 CSS」的层叠顺序一致）
+        // 顺序契约：先运行时开关 → 主题变量 → 布局类 → 样式包（整包 CSS 可覆盖前两者，
+        // 与官方「power-user 设置 → 扩展主题 CSS」的层叠顺序一致）。
+        // 开关最先：quick 按钮显隐影响输入区初始布局。
+        currentRuntimeConfigJson?.let(kernel::setRuntimeConfig)
         currentThemeJson?.let(kernel::applyThemeRaw)
         kernel.setBodyClasses(currentBodyClasses)
         kernel.applyStylePack(currentStylePackEnabled, currentStylePackHref, currentStylePackVars, currentStylePackExtensionHref)
@@ -367,29 +381,46 @@ class KernelWebViewPool(
         return instance
     }
 
-    /** 取空闲实例并执行 [block]；池空则新建 */
+    /** 创建中单飞（9.1 红线：绝不并发创建第二个 WebView）。
+     *  此前 acquire 在预热未完成时进入会再建一个新实例——双冷加载串行执行，
+     *  就是"点进去好几秒"的直接放大器（第二个实例加载完才回调白屏结束）。 */
+    private var creating: kotlinx.coroutines.Deferred<PooledWebView>? = null
+
+    private suspend fun createSingleFlight(): PooledWebView {
+        val ongoing = synchronized(this) { creating }
+        if (ongoing != null && ongoing.isActive) return ongoing.await()
+        val deferred = scope.async(Dispatchers.Main) { createAndWarm() }
+        synchronized(this) { creating = deferred }
+        return try {
+            deferred.await()
+        } finally {
+            synchronized(this) { if (creating === deferred) creating = null }
+        }
+    }
+
+    /** 取空闲实例并执行 [block]；池空则新建（创建中则等单飞完成复用同一实例） */
     fun acquire(block: (PooledWebView) -> Unit) {
         scope.launch(Dispatchers.Main) {
             val existing = idle.pollFirst()
             if (existing != null) {
                 existing.busy = true
                 block(existing)
-            } else if (synchronized(all) { all.size } < maxSize) {
-                val fresh = runCatching { createAndWarm() }.onFailure { reportError("内核实例创建失败", it) }.getOrNull() ?: return@launch
-                fresh.busy = true
-                block(fresh)
-            } else {
-                // 池满兜底：直接新建不设限（内存压力由系统回收机制与 release 端控制）
-                val fresh = runCatching { createAndWarm() }.onFailure { reportError("内核实例创建失败", it) }.getOrNull() ?: return@launch
-                fresh.busy = true
-                block(fresh)
+                return@launch
             }
+            // 无空闲：等创建中实例或新建（单飞——绝不出现两个并发 createAndWarm）
+            val fresh = runCatching { createSingleFlight() }
+                .onFailure { reportError("内核实例创建失败", it) }
+                .getOrNull() ?: return@launch
+            fresh.busy = true
+            block(fresh)
         }
     }
 
     fun release(pooled: PooledWebView) {
         scope.launch(Dispatchers.Main) {
-            pooled.webView.evaluateJavascript("window.Kernel && window.Kernel.clear();", null)
+            // 不再 clear()：保留消息 DOM，重进同会话走内核 renderChat 增量 diff——
+            // 未变化的楼层零重渲（showdown+DOMPurify 全跳过），这是"重进秒开"的关键。
+            // 主题/背景/输入区状态在下次 acquire 的 applyPageSetup 全量重放，不受影响。
             // 摘除旧父容器：复用实例挂新槽位前必须脱离回收槽（否则不可见）
             (pooled.webView.parent as? android.view.ViewGroup)?.removeView(pooled.webView)
             pooled.busy = false

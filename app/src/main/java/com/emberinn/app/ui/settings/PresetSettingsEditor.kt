@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.design.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.prompt.NamesBehavior
 import com.emberinn.engine.prompt.PresetApplyEngine

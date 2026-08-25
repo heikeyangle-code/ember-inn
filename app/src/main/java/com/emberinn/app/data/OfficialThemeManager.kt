@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -295,6 +296,23 @@ class OfficialThemeManager(private val context: Context) {
     }
 
     fun export(name: String): String? = readRaw(name)
+
+    /**
+     * 官方 saveTheme(name)「另存为新主题」（power-user.js L2484-2516）：
+     * 当前主题 JSON 克隆 + name 换新名 → filesDir/themes/ 新文件 → 自动切换选中。
+     * 空名/重名返回 false（官方 importTheme "Theme with that name already exists" 语义）。
+     */
+    fun saveAs(newName: String): Boolean {
+        val name = newName.trim()
+        if (name.isEmpty() || locators.containsKey(name)) return false
+        val raw = _currentThemeJson.value ?: return false
+        val obj = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject ?: return false
+        val renamed = JsonObject(obj.toMutableMap().apply { put("name", JsonPrimitive(name)) })
+        File(themesDir, sanitize(name) + ".json").writeText(renamed.toString())
+        reload()
+        select(name, persist = true)
+        return true
+    }
 
     // ------------------------------------------------------------------
 
