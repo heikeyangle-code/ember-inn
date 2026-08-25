@@ -77,7 +77,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
-import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.engine.group.GroupGenerationMode
