@@ -16,14 +16,16 @@ object ServicesPrefs {
     private const val NAME = "ember_services"
 
     // 翻译
+    // 官方 defaultSettings（extensions/translate/index.js:33-39）：
+    // target_language='en'、internal_language='en'、provider='google'、auto_mode='none'、deepl_endpoint='free'
     fun translateProvider(context: Context): String =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_provider", "libre") ?: "libre"
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_provider", "google") ?: "google"
 
     fun translateAutoMode(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_auto_mode", "none") ?: "none"
 
     fun translateTargetLanguage(context: Context): String =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_target_language", "zh") ?: "zh"
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_target_language", "en") ?: "en"
 
     fun translateApiKey(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_api_key", "") ?: ""
@@ -34,6 +36,10 @@ object ServicesPrefs {
     /** 官方 extension_settings.translate.internal_language（默认 en）：出站译文的目标语言。 */
     fun translateInternalLanguage(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_internal_language", "en") ?: "en"
+
+    /** 官方 extension_settings.translate.deepl_endpoint（默认 free）：DeepL 免费/Pro 端点选择。 */
+    fun translateDeeplEndpoint(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_deepl_endpoint", "free") ?: "free"
 
     // 图像
     fun imageSource(context: Context): String =
@@ -287,13 +293,14 @@ object ServicesPrefs {
         autoMode: String,
         targetLanguage: String,
         apiKey: String,
+        deeplEndpoint: String? = null,
     ) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("translation_provider", provider)
             .putString("translation_auto_mode", autoMode)
             .putString("translation_target_language", targetLanguage)
             .putString("translation_api_key", apiKey)
-            .apply()
+            .apply { deeplEndpoint?.let { putString("translation_deepl_endpoint", it) } }
     }
 
     fun saveTranslateUrl(context: Context, url: String) {

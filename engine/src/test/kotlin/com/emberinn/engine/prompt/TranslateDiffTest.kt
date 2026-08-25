@@ -1,6 +1,7 @@
 package com.emberinn.engine.prompt
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -13,7 +14,7 @@ import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Translate 差分（scripts/diff/translate-official.mjs → 19 例）。 */
+/** Translate 差分（scripts/diff/translate-official.mjs → 38 例）。 */
 class TranslateDiffTest {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -23,7 +24,7 @@ class TranslateDiffTest {
         val res = checkNotNull(javaClass.getResource("/diff/translate.json"))
         val root = json.parseToJsonElement(res.readText()).jsonObject
         val cases = root.getValue("cases").jsonArray
-        assertEquals(19, cases.size)
+        assertEquals(38, cases.size)
 
         for (el in cases) {
             val c = el.jsonObject
@@ -73,12 +74,29 @@ class TranslateDiffTest {
                     }
                     assertEquals("case $id $name", expected, actualJson)
                 }
-                "prov-google" -> {
+                "prov-google-url" -> {
                     val i = input.jsonObject
-                    val (endpoint, formKey) = TranslateEngine.googleEndpoint(i.getValue("target").jsonPrimitive.content)
-                    val expectedUrl = expected.jsonObject["url"]!!.jsonPrimitive.content
-                    assertEquals("case $id $name url", expectedUrl, endpoint)
-                    assertEquals("case $id $name formKey", "q", formKey)
+                    val actual = TranslateEngine.googleBatchUrl(i.getValue("reqId").jsonPrimitive.int)
+                    assertEquals("case $id $name url", expected.jsonObject["url"]!!.jsonPrimitive.content, actual)
+                }
+                "prov-google-body" -> {
+                    val i = input.jsonObject
+                    val actual = TranslateEngine.googleBody(
+                        i.getValue("text").jsonPrimitive.content,
+                        i.getValue("target").jsonPrimitive.content,
+                        0,
+                    )
+                    assertEquals("case $id $name body", expected.jsonObject["body"]!!.jsonPrimitive.content, actual)
+                }
+                "prov-google-parse" -> {
+                    val i = input.jsonObject
+                    val actual = TranslateEngine.googleParse(i.getValue("response").jsonPrimitive.content)
+                    val exp = expected.jsonObject["text"]
+                    if (exp == null || exp is kotlinx.serialization.json.JsonNull) {
+                        assertEquals("case $id $name parse-fail", null, actual)
+                    } else {
+                        assertEquals("case $id $name text", exp.jsonPrimitive.content, actual)
+                    }
                 }
                 "prov-lingva" -> {
                     val i = input.jsonObject
@@ -130,6 +148,37 @@ class TranslateDiffTest {
                         put("to_lang", actual.to_lang); put("url", actual.url)
                     }
                     assertEquals("case $id $name", expected, actualJson)
+                }
+                // 图片链接切段（官方 translate()）：[{isLink, text}]
+                "seg" -> {
+                    val i = input.jsonObject
+                    val text = i.getValue("text").jsonPrimitive.content
+                    val actual = TranslateEngine.imageLinkSegments(text)
+                    val actualJson = buildJsonArray {
+                        actual.forEach { s ->
+                            add(buildJsonObject {
+                                put("isLink", s.isLink)
+                                put("text", s.text)
+                            })
+                        }
+                    }
+                    assertEquals("case $id $name",
+                        expected.jsonObject.getValue("segments"), actualJson)
+                }
+                // 分块调用序列（chunkedTranslate）
+                "chunk" -> {
+                    val i = input.jsonObject
+                    val provider = i.getValue("provider").jsonPrimitive.content
+                    val text = i.getValue("text").jsonPrimitive.content
+                    val actual = TranslateEngine.chunked(text, provider)
+                    val actualJson = buildJsonArray { actual.forEach { add(JsonPrimitive(it)) } }
+                    // 长度辅助断言（官方脚本对超限无分隔符场景额外记录 lengths）
+                    expected.jsonObject["lengths"]?.let { lens ->
+                        assertEquals("case $id $name lengths", lens,
+                            buildJsonArray { actual.forEach { add(JsonPrimitive(it.length)) } })
+                    }
+                    assertEquals("case $id $name",
+                        expected.jsonObject.getValue("calls"), actualJson)
                 }
             }
         }

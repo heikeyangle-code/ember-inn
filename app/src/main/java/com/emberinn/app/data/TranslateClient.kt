@@ -1,5 +1,7 @@
 package com.emberinn.app.data
 
+import com.emberinn.engine.worldinfo.VectorTextUtils
+
 import android.content.Context
 import com.emberinn.app.ui.settings.ServicesPrefs
 import com.emberinn.engine.prompt.TranslateEngine
@@ -15,13 +17,14 @@ import org.json.JSONObject
 import java.net.URLEncoder
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 /**
  * 翻译执行层：对齐官方 src/endpoints/translate.js 的全部 8 家提供商协议
- * （Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing；Bing 按官方依赖 bing-translate-api 4.2.1
+ * （Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing；Bing 按官方依赖 bing-translate-api
  *  的 token 流程原样移植：GET /translator 取 IG/IID/key/token → POST /ttranslatev3）。
- * 简化登记：Bing token 每请求重新获取（官方带缓存/过期，行为等价）；Google 走 google-translate-api-x
- *  的免费端点（client=gtx）。
+ * 简化登记：Bing token 每请求重新获取（官方带缓存/过期，行为等价）；Google 走官方库
+ *  google-translate-api-x 默认的 batchexecute 路径（forceBatch:true）。
  */
 class TranslateClient {
 
@@ -60,7 +63,23 @@ class TranslateClient {
         val target = targetLang ?: ServicesPrefs.translateTargetLanguage(context)
         val apiKey = ServicesPrefs.translateApiKey(context)
         val url = ServicesPrefs.translateUrl(context)
-        runCatching { dispatch(prepared, target, provider, apiKey, url) }.getOrNull()
+        // 官方 translate()（index.js:449-485）：先按内嵌图片链接切段，文本段逐段翻译、链接原样回插；
+        // 任一段失败则整体失败（官方 throw → toastr.error）
+        runCatching {
+            buildString {
+                for (segment in TranslateEngine.imageLinkSegments(prepared)) {
+                    if (segment.isLink) {
+                        append(segment.text)
+                    } else if (segment.text.isEmpty()) {
+                        // 官方 translateInner('') → ''，不发网络请求
+                    } else {
+                        for (chunk in TranslateEngine.chunked(segment.text, provider)) {
+                            append(dispatch(context, chunk, target, provider, apiKey, url) ?: throw IllegalStateException("translate failed"))
+                        }
+                    }
+                }
+            }
+        }.getOrNull()
     }
 
     /**
@@ -79,11 +98,27 @@ class TranslateClient {
         val provider = ServicesPrefs.translateProvider(context)
         val apiKey = ServicesPrefs.translateApiKey(context)
         val url = ServicesPrefs.translateUrl(context)
-        runCatching { dispatch(prepared, targetLang, provider, apiKey, url) }.getOrNull()
+        // 官方同走 translate()：图片链接切段 + 分块（见上）
+        runCatching {
+            buildString {
+                for (segment in TranslateEngine.imageLinkSegments(prepared)) {
+                    if (segment.isLink) {
+                        append(segment.text)
+                    } else if (segment.text.isEmpty()) {
+                        // 官方 translateInner('') → ''，不发网络请求
+                    } else {
+                        for (chunk in TranslateEngine.chunked(segment.text, provider)) {
+                            append(dispatch(context, chunk, targetLang, provider, apiKey, url) ?: throw IllegalStateException("translate failed"))
+                        }
+                    }
+                }
+            }
+        }.getOrNull()
     }
 
     /** 8 家 provider 的统一分发（translate / translateReasoning 共用）。 */
     private fun dispatch(
+        context: Context,
         text: String,
         target: String,
         provider: String,
@@ -93,12 +128,13 @@ class TranslateClient {
         "libre" -> libre(text, target, apiKey, url)
         "google" -> google(text, target)
         "lingva" -> lingva(text, target, url)
-        "deepl" -> deepl(text, target, apiKey, url)
+        "deepl" -> deepl(context, text, target, apiKey)
         "deeplx" -> deeplx(text, target, url)
-        "oneringtranslator" -> onering(text, target, url)
+        "oneringtranslator" -> onering(context, text, target, url)
         "bing" -> bing(text, target)
         "yandex" -> yandex(text, target)
-        else -> null
+        // 官方 translateInner default：未知 provider 原样返回（index.js:514-516）
+        else -> text
     }
 
     // ---- Libre（官方：JSON {q, source:'auto', target, format:'text', api_key} → translatedText）----
@@ -114,45 +150,46 @@ class TranslateClient {
         }
     }
 
-    // ---- Google（官方 google-translate-api-x：免费端点 client=gtx）----
+    // ---- Google（官方服务端 /google → google-translate-api-x（默认 forceBatch）→ batchexecute；
+    //      服务端映射 pt-BR→pt（src/endpoints/translate.js:78-80）；_reqid=Math.floor(1000+random*9000)）----
     private fun google(text: String, target: String): String? {
-        val (endpoint, formKey) = TranslateEngine.googleEndpoint(target)
-        val body = FormBody.Builder().add(formKey, text).build()
-        val request = Request.Builder().url(endpoint).post(body).build()
+        val lang = if (target == "pt-BR") "pt" else target
+        val reqId = Random.nextInt(1000, 10000)
+        val body = TranslateEngine.googleBody(text, lang, reqId)
+            .toRequestBody("application/x-www-form-urlencoded;charset=UTF-8".toMediaType())
+        val request = Request.Builder()
+            .url(TranslateEngine.googleBatchUrl(reqId))
+            .post(body)
+            .build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null
-            val arr = JSONArray(resp.body?.string().orEmpty())
-            val outer = arr.optJSONArray(0) ?: return null
-            val sb = StringBuilder()
-            for (i in 0 until outer.length()) {
-                val row = outer.optJSONArray(i) ?: continue
-                val seg = row.optString(0)
-                if (seg.isNotEmpty()) sb.append(seg)
-            }
-            return sb.toString().ifBlank { null }
+            return TranslateEngine.googleParse(resp.body?.string().orEmpty())?.ifBlank { null }
         }
     }
 
-    // ---- Yandex（官方：POST /api/v1/tr.json/translate?ucid=&srv=android&format=text，form text/lang → json.text join）----
+    // ---- Yandex（官方：客户端 5000 分块（translateProviderYandex）→ form 重复 text 字段 + lang；
+    //      服务端映射 pt-PT→pt、zh-CN|zh-TW→zh（src/endpoints/translate.js:105-111）；响应 json.text 用逗号连接）----
     private fun yandex(text: String, target: String): String? {
         val lang = when (target) {
             "pt-PT" -> "pt"
             "zh-CN", "zh-TW" -> "zh"
             else -> target
         }
+        // 官方 translateProviderYandex：>5000 时 utils.js splitRecursive(text, 5000)
+        val chunks = if (text.length <= 5000) listOf(text) else VectorTextUtils.splitRecursive(text, 5000)
         val ucid = UUID.randomUUID().toString().replace("-", "")
         val endpoint = "https://translate.yandex.net/api/v1/tr.json/translate?ucid=$ucid&srv=android&format=text"
         val body = FormBody.Builder()
-            .add("text", text)
+            .apply { for (chunk in chunks) add("text", chunk) }
             .add("lang", lang)
             .build()
         val request = Request.Builder().url(endpoint).post(body).build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null
             val arr = JSONObject(resp.body?.string().orEmpty()).optJSONArray("text") ?: return null
-            val sb = StringBuilder()
-            for (i in 0 until arr.length()) sb.append(arr.optString(i))
-            return sb.toString().ifBlank { null }
+            // 官方服务端 json.text.join()：默认逗号分隔
+            val parts = List(arr.length()) { arr.optString(it) }
+            return parts.joinToString(",").ifBlank { null }
         }
     }
 
@@ -172,16 +209,22 @@ class TranslateClient {
         }
     }
 
-    // ---- DeepL（官方：form text/target_lang(+formality)，free/pro 端点，DeepL-Auth-Key）----
-    private fun deepl(text: String, target: String, apiKey: String, url: String): String? {
+    // ---- DeepL（官方：form text/target_lang(+formality)，DeepL-Auth-Key。
+    //      官方无自定义 URL（LOCAL_URL 不含 deepl）：deepl_endpoint||'free' 选 api-free/api 主机
+    //      （src/endpoints/translate.js:234-236）；zh 仅 zh-CN/zh-TW→ZH；formality 集合见 :228）----
+    private fun deepl(context: Context, text: String, target: String, apiKey: String): String? {
         if (apiKey.isBlank()) return null
-        val endpoint = url.ifBlank { "https://api-free.deepl.com/v2/translate" }
-        val lang = if (target == "zh" || target == "zh-CN" || target == "zh-TW") "ZH" else target
+        val endpoint = if (ServicesPrefs.translateDeeplEndpoint(context) == "pro") {
+            "https://api.deepl.com/v2/translate"
+        } else {
+            "https://api-free.deepl.com/v2/translate"
+        }
+        val lang = if (target == "zh-CN" || target == "zh-TW") "ZH" else target
         val body = FormBody.Builder()
             .add("text", text)
             .add("target_lang", lang)
             .apply {
-                if (lang in setOf("de", "fr", "it", "es", "nl", "ja", "ru", "pt", "pt-BR", "pt-PT")) {
+                if (lang in setOf("de", "fr", "it", "es", "nl", "ja", "ru", "pt-BR", "pt-PT")) {
                     add("formality", "default")
                 }
             }
@@ -197,13 +240,17 @@ class TranslateClient {
         }
     }
 
-    // ---- OneRing（官方：GET {url}?text&from_lang&to_lang → result）----
-    private fun onering(text: String, target: String, url: String): String? {
+    // ---- OneRing（官方：GET {url}?text&from_lang&to_lang → JSON.result）----
+    private fun onering(context: Context, text: String, target: String, url: String): String? {
         val base = url.ifBlank { "http://127.0.0.1:4990/translate" }
-        val lang = if (target == "pt-BR" || target == "pt-PT") "pt" else target
-        // 官方 translateProviderOneRing：from_lang = lang == internal_lang ? target_lang : internal_lang
-        // 这里 internalLang="en"、targetLang="zh"；实际 OneRing 行为多数实现 from_lang=auto 也可
-        val ob = TranslateEngine.oneringBody(text, lang, base, "en", "zh")
+        // 官方 translateProviderOneRing（extensions/translate/index.js）：
+        // from_lang = lang == internal_language ? target_language : internal_language；to_lang = lang 原样
+        // （服务端的 pt-BR→pt 重写对官方请求体不生效——客户端只发 from_lang/to_lang）
+        val ob = TranslateEngine.oneringBody(
+            text, target, base,
+            ServicesPrefs.translateInternalLanguage(context),
+            ServicesPrefs.translateTargetLanguage(context),
+        )
         val endpoint = ob.url + "?text=${URLEncoder.encode(ob.text, "UTF-8")}&from_lang=${URLEncoder.encode(ob.from_lang, "UTF-8")}&to_lang=${URLEncoder.encode(ob.to_lang, "UTF-8")}"
         val request = Request.Builder().url(endpoint).get().build()
         client.newCall(request).execute().use { resp ->
@@ -212,15 +259,16 @@ class TranslateClient {
         }
     }
 
-    // ---- DeepLX（官方：JSON {text, source_lang:'auto', target_lang} → data；zh→ZH）----
+    // ---- DeepLX（官方：JSON {text, source_lang:'auto', target_lang} → data；zh-CN/zh-TW→ZH）----
     private fun deeplx(text: String, target: String, url: String): String? {
-        if (url.isBlank()) return null
-        val lang = if (target == "zh" || target == "zh-CN" || target == "zh-TW") "ZH" else target
+        // 官方 DEEPLX_URL_DEFAULT（src/endpoints/translate.js:10）：本地默认端点
+        val effectiveUrl = url.ifBlank { "http://127.0.0.1:1188/translate" }
+        val lang = if (target == "zh-CN" || target == "zh-TW") "ZH" else target
         val payload = JSONObject().apply {
-            val b = TranslateEngine.deeplxBody(text, lang, url)
+            val b = TranslateEngine.deeplxBody(text, lang, effectiveUrl)
             put("text", b.text); put("source_lang", b.source_lang); put("target_lang", b.target_lang)
         }.toString()
-        val request = Request.Builder().url(url).post(payload.toRequestBody(jsonMedia)).build()
+        val request = Request.Builder().url(effectiveUrl).post(payload.toRequestBody(jsonMedia)).build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null
             return JSONObject(resp.body?.string().orEmpty()).optString("data").ifBlank { null }
@@ -230,8 +278,9 @@ class TranslateClient {
     // ---- Bing（官方依赖 bing-translate-api 4.2.1：GET /translator 取 IG/IID/key/token →
     //      POST /ttranslatev3 form {fromLang,text,token,key,to} → [0].translations[0].text）----
     private fun bing(text: String, target: String): String? {
+        // 官方服务端 /bing 映射（src/endpoints/translate.js:383-392）：仅此三项
         val lang = when (target) {
-            "zh", "zh-CN" -> "zh-Hans"
+            "zh-CN" -> "zh-Hans"
             "zh-TW" -> "zh-Hant"
             "pt-BR" -> "pt"
             else -> target

@@ -71,12 +71,120 @@ private val TRANSLATE_MODES = listOf(
     DropdownOption("inputs", "翻译输入"),
     DropdownOption("both", "两者都翻译"),
 )
+// 官方 #deepl_api_endpoint（index.html:27-30）：仅 provider==deepl 时显示
+private val DEEPL_ENDPOINTS = listOf(
+    DropdownOption("free", "Free"),
+    DropdownOption("pro", "Pro"),
+)
+// 官方 LOCAL_URL（index.js:150）：显示 URL 输入的提供商
+private val LOCAL_URL_PROVIDERS = listOf("libre", "oneringtranslator", "deeplx", "lingva")
+// 官方 translate/index.js languageCodes 全 105 项（声明顺序=官方下拉顺序，label/value 逐字）
 private val TARGET_LANGUAGES = listOf(
-    DropdownOption("zh", "中文"), DropdownOption("en", "English"), DropdownOption("ja", "日本語"),
-    DropdownOption("ko", "한국어"), DropdownOption("fr", "Français"), DropdownOption("de", "Deutsch"),
-    DropdownOption("es", "Español"), DropdownOption("pt", "Português"), DropdownOption("it", "Italiano"),
-    DropdownOption("ru", "Русский"), DropdownOption("ar", "العربية"), DropdownOption("nl", "Nederlands"),
-    DropdownOption("pl", "Polski"), DropdownOption("tr", "Türkçe"), DropdownOption("uk", "Українська"),
+    DropdownOption("af", "Afrikaans"),
+    DropdownOption("sq", "Albanian"),
+    DropdownOption("am", "Amharic"),
+    DropdownOption("ar", "Arabic"),
+    DropdownOption("hy", "Armenian"),
+    DropdownOption("az", "Azerbaijani"),
+    DropdownOption("eu", "Basque"),
+    DropdownOption("be", "Belarusian"),
+    DropdownOption("bn", "Bengali"),
+    DropdownOption("bs", "Bosnian"),
+    DropdownOption("bg", "Bulgarian"),
+    DropdownOption("ca", "Catalan"),
+    DropdownOption("ceb", "Cebuano"),
+    DropdownOption("zh-CN", "Chinese (Simplified)"),
+    DropdownOption("zh-TW", "Chinese (Traditional)"),
+    DropdownOption("co", "Corsican"),
+    DropdownOption("hr", "Croatian"),
+    DropdownOption("cs", "Czech"),
+    DropdownOption("da", "Danish"),
+    DropdownOption("nl", "Dutch"),
+    DropdownOption("en", "English"),
+    DropdownOption("eo", "Esperanto"),
+    DropdownOption("et", "Estonian"),
+    DropdownOption("fi", "Finnish"),
+    DropdownOption("fr", "French"),
+    DropdownOption("fy", "Frisian"),
+    DropdownOption("gl", "Galician"),
+    DropdownOption("ka", "Georgian"),
+    DropdownOption("de", "German"),
+    DropdownOption("el", "Greek"),
+    DropdownOption("gu", "Gujarati"),
+    DropdownOption("ht", "Haitian Creole"),
+    DropdownOption("ha", "Hausa"),
+    DropdownOption("haw", "Hawaiian"),
+    DropdownOption("iw", "Hebrew"),
+    DropdownOption("hi", "Hindi"),
+    DropdownOption("hmn", "Hmong"),
+    DropdownOption("hu", "Hungarian"),
+    DropdownOption("is", "Icelandic"),
+    DropdownOption("ig", "Igbo"),
+    DropdownOption("id", "Indonesian"),
+    DropdownOption("ga", "Irish"),
+    DropdownOption("it", "Italian"),
+    DropdownOption("ja", "Japanese"),
+    DropdownOption("jw", "Javanese"),
+    DropdownOption("kn", "Kannada"),
+    DropdownOption("kk", "Kazakh"),
+    DropdownOption("km", "Khmer"),
+    DropdownOption("ko", "Korean"),
+    DropdownOption("ku", "Kurdish"),
+    DropdownOption("ky", "Kyrgyz"),
+    DropdownOption("lo", "Lao"),
+    DropdownOption("la", "Latin"),
+    DropdownOption("lv", "Latvian"),
+    DropdownOption("lt", "Lithuanian"),
+    DropdownOption("lb", "Luxembourgish"),
+    DropdownOption("mk", "Macedonian"),
+    DropdownOption("mg", "Malagasy"),
+    DropdownOption("ms", "Malay"),
+    DropdownOption("ml", "Malayalam"),
+    DropdownOption("mt", "Maltese"),
+    DropdownOption("mi", "Maori"),
+    DropdownOption("mr", "Marathi"),
+    DropdownOption("mn", "Mongolian"),
+    DropdownOption("my", "Myanmar (Burmese)"),
+    DropdownOption("ne", "Nepali"),
+    DropdownOption("no", "Norwegian"),
+    DropdownOption("ny", "Nyanja (Chichewa)"),
+    DropdownOption("ps", "Pashto"),
+    DropdownOption("fa", "Persian"),
+    DropdownOption("pl", "Polish"),
+    DropdownOption("pt-PT", "Portuguese (Portugal)"),
+    DropdownOption("pt-BR", "Portuguese (Brazil)"),
+    DropdownOption("pa", "Punjabi"),
+    DropdownOption("ro", "Romanian"),
+    DropdownOption("ru", "Russian"),
+    DropdownOption("sm", "Samoan"),
+    DropdownOption("gd", "Scots Gaelic"),
+    DropdownOption("sr", "Serbian"),
+    DropdownOption("st", "Sesotho"),
+    DropdownOption("sn", "Shona"),
+    DropdownOption("sd", "Sindhi"),
+    DropdownOption("si", "Sinhala (Sinhalese)"),
+    DropdownOption("sk", "Slovak"),
+    DropdownOption("sl", "Slovenian"),
+    DropdownOption("so", "Somali"),
+    DropdownOption("es", "Spanish"),
+    DropdownOption("su", "Sundanese"),
+    DropdownOption("sw", "Swahili"),
+    DropdownOption("sv", "Swedish"),
+    DropdownOption("tl", "Tagalog (Filipino)"),
+    DropdownOption("tg", "Tajik"),
+    DropdownOption("ta", "Tamil"),
+    DropdownOption("te", "Telugu"),
+    DropdownOption("th", "Thai"),
+    DropdownOption("tr", "Turkish"),
+    DropdownOption("uk", "Ukrainian"),
+    DropdownOption("ur", "Urdu"),
+    DropdownOption("uz", "Uzbek"),
+    DropdownOption("vi", "Vietnamese"),
+    DropdownOption("cy", "Welsh"),
+    DropdownOption("xh", "Xhosa"),
+    DropdownOption("yi", "Yiddish"),
+    DropdownOption("yo", "Yoruba"),
+    DropdownOption("zu", "Zulu"),
 )
 
 // 官方 stable-diffusion/index.js 的 sources（取主流自托管 / 云来源）
@@ -146,16 +254,22 @@ private fun TranslateCard() {
     var provider by rememberSaveable { mutableStateOf(ServicesPrefs.translateProvider(context)) }
     var autoMode by rememberSaveable { mutableStateOf(ServicesPrefs.translateAutoMode(context)) }
     var target by rememberSaveable { mutableStateOf(ServicesPrefs.translateTargetLanguage(context)) }
+    var deeplEndpoint by rememberSaveable { mutableStateOf(ServicesPrefs.translateDeeplEndpoint(context)) }
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.translateApiKey(context)) }
     var url by rememberSaveable { mutableStateOf(ServicesPrefs.translateUrl(context)) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
     fun save() = ServicesPrefs.saveTranslate(context, provider, autoMode, target, apiKey)
+    fun saveDeeplEndpoint(v: String) { deeplEndpoint = v; ServicesPrefs.saveTranslate(context, provider, autoMode, target, apiKey, deeplEndpoint = v) }
     fun saveUrl(v: String) { url = v; ServicesPrefs.saveTranslateUrl(context, v) }
 
     ServiceCard(title = "翻译") {
         ServiceNote("官方 translate 扩展：自动模式 / 提供商 / 目标语言 / API Key。聊天长按消息可翻译。")
         MenuPicker("自动翻译", labelOf(TRANSLATE_MODES, autoMode), TRANSLATE_MODES) { autoMode = it; save() }
         MenuPicker("提供商", labelOf(TRANSLATE_PROVIDERS, provider), TRANSLATE_PROVIDERS) { provider = it; save() }
+        // 官方 #deepl_api_endpoint：仅 DeepL 时显示（index.js:159/172）
+        if (provider == "deepl") {
+            MenuPicker("DeepL 端点", labelOf(DEEPL_ENDPOINTS, deeplEndpoint), DEEPL_ENDPOINTS) { saveDeeplEndpoint(it) }
+        }
         MenuPicker("目标语言", labelOf(TARGET_LANGUAGES, target), TARGET_LANGUAGES) { target = it; save() }
         KeyRow(
             value = apiKey,
@@ -164,7 +278,10 @@ private fun TranslateCard() {
             onValueChange = { apiKey = it; save() },
             label = "API Key（按提供商需要）",
         )
-        TextFieldRow("接口地址（可空：Libre 官方/DeepL free 默认）", url) { saveUrl(it) }
+        // 官方 URL 输入仅 LOCAL_URL 四家提供商可见（libre/onering/deeplx/lingva）
+        if (provider in LOCAL_URL_PROVIDERS) {
+            TextFieldRow("接口地址（可空=官方默认）", url) { saveUrl(it) }
+        }
     }
 }
 
