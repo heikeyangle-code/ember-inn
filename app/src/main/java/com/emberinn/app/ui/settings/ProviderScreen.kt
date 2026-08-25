@@ -558,11 +558,7 @@ fun ProviderDetailScreen(
             Text("bias_preset_selected（logit_bias 预设）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sampler.biasPresets.keys.forEach { name ->
-                    FilterChip(
-                        selected = sampler.biasPresetSelected == name,
-                        onClick = { vm.setBiasPresetSelected(name) },
-                        label = { Text(name) },
-                    )
+                    ShellChip(name, selected = sampler.biasPresetSelected == name) {vm.setBiasPresetSelected(name)}
                 }
             }
             var showBiasNew by remember { mutableStateOf(false) }
@@ -694,32 +690,20 @@ fun ProviderDetailScreen(
             Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->
-                    FilterChip(
-                        selected = sampler.namesBehavior == v,
-                        onClick = { vm.setNamesBehavior(v) },
-                        label = { Text(label) },
-                    )
+                    ShellChip(label, selected = sampler.namesBehavior == v) {vm.setNamesBehavior(v)}
                 }
             }
             Text("消息角色与续写（names_behavior/continue_postfix/use_sysprompt/squash_system_messages）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
             Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->
-                    FilterChip(
-                        selected = sampler.namesBehavior == v,
-                        onClick = { vm.setNamesBehavior(v) },
-                        label = { Text(label) },
-                    )
+                    ShellChip(label, selected = sampler.namesBehavior == v) {vm.setNamesBehavior(v)}
                 }
             }
             Text("continue_postfix（继续生成后缀）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("" to "无", " " to "空格", "\n" to "换行", "\n\n" to "双换行").forEach { (v, label) ->
-                    FilterChip(
-                        selected = sampler.continuePostfix == v,
-                        onClick = { vm.setContinuePostfix(v) },
-                        label = { Text(label) },
-                    )
+                    ShellChip(label, selected = sampler.continuePostfix == v) {vm.setContinuePostfix(v)}
                 }
             }
                         SwitchRow(
@@ -735,21 +719,13 @@ fun ProviderDetailScreen(
             Text("inline_image_quality（内联图片质量）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("auto", "low", "high").forEach { value ->
-                    FilterChip(
-                        selected = sampler.inlineImageQuality == value,
-                        onClick = { vm.setInlineImageQuality(value) },
-                        label = { Text(value) },
-                    )
+                    ShellChip(value, selected = sampler.inlineImageQuality == value) {vm.setInlineImageQuality(value)}
                 }
             }
             Text("tool_reasoning_mode（工具推理链）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("disabled", "since_last_user", "active_chain").forEach { value ->
-                    FilterChip(
-                        selected = sampler.toolReasoningMode == value,
-                        onClick = { vm.setToolReasoningMode(value) },
-                        label = { Text(value) },
-                    )
+                    ShellChip(value, selected = sampler.toolReasoningMode == value) {vm.setToolReasoningMode(value)}
                 }
             }
             Text("工具与媒体（function_calling/tool_reasoning_mode/media_inlining/web_search/request_images）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
@@ -765,21 +741,13 @@ fun ProviderDetailScreen(
                 Text("request_image_resolution（分辨率）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("", "1K", "2K", "4K").forEach { value ->
-                        FilterChip(
-                            selected = sampler.requestImageResolution == value,
-                            onClick = { vm.setRequestImageResolution(value) },
-                            label = { Text(value.ifBlank { "Auto" }) },
-                        )
+                        ShellChip(value.ifBlank { "Auto" }, selected = sampler.requestImageResolution == value) {vm.setRequestImageResolution(value)}
                     }
                 }
                 Text("request_image_aspect_ratio（宽高比）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("", "1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3").forEach { value ->
-                        FilterChip(
-                            selected = sampler.requestImageAspectRatio == value,
-                            onClick = { vm.setRequestImageAspectRatio(value) },
-                            label = { Text(value.ifBlank { "Auto" }) },
-                        )
+                        ShellChip(value.ifBlank { "Auto" }, selected = sampler.requestImageAspectRatio == value) {vm.setRequestImageAspectRatio(value)}
                     }
                 }
             }
@@ -886,11 +854,7 @@ fun ProviderDetailScreen(
                 Text("sort_models（模型排序）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("alphabetically", "pricing.prompt", "pricing.completion", "context_length").forEach { value ->
-                        FilterChip(
-                            selected = sortModels == value,
-                            onClick = { vm.setSortModels(value) },
-                            label = { Text(value) },
-                        )
+                        ShellChip(value, selected = sortModels == value) {vm.setSortModels(value)}
                     }
                 }
             }
@@ -921,15 +885,11 @@ fun ProviderDetailScreen(
             Text("代理预设（官方 proxies 列表，全局）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 proxies.forEach { preset ->
-                    FilterChip(
-                        selected = proxySelected == preset.name,
-                        onClick = {
-                            proxySelected = preset.name
-                            vm.setReverseProxy(preset.url)
-                            vm.setProxyPassword(preset.password)
-                        },
-                        label = { Text(preset.name) },
-                    )
+                    ShellChip(preset.name, selected = proxySelected == preset.name) {
+                        proxySelected = preset.name
+                        vm.setReverseProxy(preset.url)
+                        vm.setProxyPassword(preset.password)
+                    }
                 }
                 TextButton(onClick = { proxyNewName = ""; showProxyNew = true }) { Text("新建预设") }
                 TextButton(
@@ -999,11 +959,7 @@ fun ProviderDetailScreen(
             Text("custom_prompt_post_processing（消息合并模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("", "merge", "merge_tools", "semi", "semi_tools", "strict", "strict_tools", "single").forEach { value ->
-                    FilterChip(
-                        selected = customPromptPostProcessing == value,
-                        onClick = { vm.setCustomPromptPostProcessing(value) },
-                        label = { Text(value.ifBlank { "none" }) },
-                    )
+                    ShellChip(value.ifBlank { "none" }, selected = customPromptPostProcessing == value) {vm.setCustomPromptPostProcessing(value)}
                 }
             }
             if (spec.id == "azure") {
@@ -1026,11 +982,7 @@ fun ProviderDetailScreen(
                 Text("vertexai_auth_mode（认证方式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("express" to "Express（API Key）", "full" to "Full（服务账号）").forEach { (value, label) ->
-                        FilterChip(
-                            selected = vertexaiAuthMode == value,
-                            onClick = { vm.setVertexaiAuthMode(value) },
-                            label = { Text(label) },
-                        )
+                        ShellChip(label, selected = vertexaiAuthMode == value) {vm.setVertexaiAuthMode(value)}
                     }
                 }
                 if (vertexaiAuthMode == "express") {
