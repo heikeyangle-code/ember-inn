@@ -531,8 +531,9 @@ object ImageGenRequestEngine {
      *
      * 占位符组两份列表（官方 generateComfyImage L4304-L4313 / generateComfyRunPodImage L4326-L4331）：
      * standard 含 model/vae/sampler/scheduler，runPod 仅 steps/scale/width/height。
-     * 官方另有 comfy_placeholders 自定义替换与 %user_avatar%/%char_avatar%（需头像 fetch），
-     * App 未提供自定义占位符 UI、头像注入未接——登记偏差。
+     * [customPlaceholders] 对应官方 comfy_placeholders（L4248-L4250）：`"%find%"` → JSON.stringify(replace)，
+     * replace 须由调用方先过 substituteParams（App 侧宏替换）。官方 %user_avatar%/%char_avatar% 头像
+     * 注入仍未接——登记偏差。
      */
     fun replaceComfyWorkflow(
         workflow: String,
@@ -550,6 +551,7 @@ object ImageGenRequestEngine {
         scale: Double,
         width: Int,
         height: Int,
+        customPlaceholders: List<Pair<String, String>> = emptyList(),
     ): String {
         val jsStr = { s: String -> buildJsonObject { put("v", JsonPrimitive(s)) }.toString()
             .removePrefix("{\"v\":").removeSuffix("}") }
@@ -579,6 +581,10 @@ object ImageGenRequestEngine {
             }
             w = w.replace("\"%$ph%\"", value)
         }
+        // 官方 L4248-L4250：自定义占位符在标准组之后替换（replaceAll 字符串搜索全局语义）
+        for ((find, replace) in customPlaceholders) {
+            w = w.replace("\"%$find%\"", jsStr(replace))
+        }
         return w
     }
 
@@ -589,6 +595,89 @@ object ImageGenRequestEngine {
      */
     fun resolveComfySeed(seed: Long, random01: Double): Long =
         if (seed >= 0) seed else Math.round(random01 * 9007199254740991.0)
+
+    /** NovelAI 调参结果（官方 getNovelParams 返回对象 {steps,width,height,sm,sm_dyn}）。 */
+    data class NovelParams(val steps: Int, val width: Int, val height: Int, val sm: Boolean, val smDyn: Boolean)
+
+    /**
+     * 官方 getNovelParams（stable-diffusion/index.js L4002-L4059）1:1：
+     * steps=min(设置,50)；sampler='ddim' 或 model ∈ {nai-diffusion-4-curated-preview,nai-diffusion-4-full}
+     * 时强制 sm/sm_dyn=false；anlasGuard 开启时尺寸>1024*1024 按 sqrt 比例缩至多倍 64（while 循环
+     * 保证像素数不超限）、steps>28 截为 28。调度器白名单回退 'karras' 属设置层副作用，由 App 层处理。
+     */
+    fun getNovelParams(
+        steps: Int,
+        width: Int,
+        height: Int,
+        sampler: String,
+        model: String,
+        novelSm: Boolean,
+        novelSmDyn: Boolean,
+        anlasGuard: Boolean,
+    ): NovelParams {
+        var s = Math.min(steps, 50)
+        var w = width
+        var h = height
+        var sm = novelSm
+        var smDyn = novelSmDyn
+
+        if (sampler == "ddim" ||
+            listOf("nai-diffusion-4-curated-preview", "nai-diffusion-4-full").contains(model)
+        ) {
+            sm = false
+            smDyn = false
+        }
+
+        if (!anlasGuard) {
+            return NovelParams(steps = s, width = w, height = h, sm = sm, smDyn = smDyn)
+        }
+
+        val maxSteps = 28
+        val maxPixels = 1024.0 * 1024.0
+
+        if (w.toDouble() * h > maxPixels) {
+            val ratio = Math.sqrt(maxPixels / (w.toDouble() * h))
+            var newWidth = Math.round(w * ratio).toInt()
+            var newHeight = Math.round(h * ratio).toInt()
+
+            // 尺寸取整到 64 的倍数，不足则下调
+            if (newWidth % 64 != 0) {
+                newWidth -= newWidth % 64
+            }
+            if (newHeight % 64 != 0) {
+                newHeight -= newHeight % 64
+            }
+
+            // 取整后像素数仍超限 → 每次 -64 直到不超
+            while (newWidth.toDouble() * newHeight > maxPixels) {
+                if (newWidth > newHeight) {
+                    newWidth -= 64
+                } else {
+                    newHeight -= 64
+                }
+            }
+
+            w = newWidth
+            h = newHeight
+        }
+
+        if (s > maxSteps) {
+            s = maxSteps
+        }
+
+        return NovelParams(steps = s, width = w, height = h, sm = sm, smDyn = smDyn)
+    }
+
+    /**
+     * 官方 calculateSkipCfgAboveSigma（src/endpoints/novelai.js L14-L17 常量 + L120-L128）1:1：
+     * model 含 'nai-diffusion-4-5' 用魔数 58 否则 19；(宽*高)/1011712 开平方后乘魔数。
+     */
+    fun calculateSkipCfgAboveSigma(width: Int, height: Int, model: String?): Double {
+        val magicConstant = if (model != null && model.contains("nai-diffusion-4-5")) 58 else 19
+        val pixelCount = width.toDouble() * height
+        val ratio = pixelCount / 1011712.0
+        return Math.pow(ratio, 0.5) * magicConstant
+    }
 
     // ---------- helpers ----------
 

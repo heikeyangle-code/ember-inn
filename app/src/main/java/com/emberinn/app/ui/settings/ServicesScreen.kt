@@ -7,6 +7,7 @@ import com.emberinn.app.ui.design.EmberTheme
 import android.widget.Toast
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.data.ComfyWorkflowStore
+import com.emberinn.app.data.ImageGenBackendsCloud
 import com.emberinn.app.data.PromptTemplateStore
 import com.emberinn.app.data.StyleStore
 import com.emberinn.engine.prompt.ImageGenPromptEngine
@@ -36,6 +37,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -319,6 +321,25 @@ private fun ImageCard() {
     var interactiveMode by rememberSaveable { mutableStateOf(ServicesPrefs.imageInteractiveMode(context)) }
     var multimodalCaptioning by rememberSaveable { mutableStateOf(ServicesPrefs.imageMultimodalCaptioning(context)) }
     var freeExtend by rememberSaveable { mutableStateOf(ServicesPrefs.imageFreeExtend(context)) }
+    var snap by rememberSaveable { mutableStateOf(ServicesPrefs.imageSnap(context)) }
+    var minimalPromptProcessing by rememberSaveable { mutableStateOf(ServicesPrefs.imageMinimalPromptProcessing(context)) }
+    var novelAnlasGuard by rememberSaveable { mutableStateOf(ServicesPrefs.novelAnlasGuard(context)) }
+    var novelSm by rememberSaveable { mutableStateOf(ServicesPrefs.novelSm(context)) }
+    var novelSmDyn by rememberSaveable { mutableStateOf(ServicesPrefs.novelSmDyn(context)) }
+    var novelDecrisper by rememberSaveable { mutableStateOf(ServicesPrefs.novelDecrisper(context)) }
+    var novelVarietyBoost by rememberSaveable { mutableStateOf(ServicesPrefs.novelVarietyBoost(context)) }
+    var hordeKarras by rememberSaveable { mutableStateOf(ServicesPrefs.imageHordeKarras(context)) }
+    var hordeSanitize by rememberSaveable { mutableStateOf(ServicesPrefs.imageHordeSanitize(context)) }
+    var hordeNsfw by rememberSaveable { mutableStateOf(ServicesPrefs.imageHordeNsfw(context)) }
+    var openaiStyle by rememberSaveable { mutableStateOf(ServicesPrefs.openaiStyle(context)) }
+    var openaiQuality by rememberSaveable { mutableStateOf(ServicesPrefs.openaiQuality(context)) }
+    var openaiQualityGpt by rememberSaveable { mutableStateOf(ServicesPrefs.openaiQualityGpt(context)) }
+    var stabilityStylePreset by rememberSaveable { mutableStateOf(ServicesPrefs.stabilityStylePreset(context)) }
+    var pollinationsEnhance by rememberSaveable { mutableStateOf(ServicesPrefs.pollinationsEnhance(context)) }
+    var googleEnhance by rememberSaveable { mutableStateOf(ServicesPrefs.googleEnhance(context)) }
+    var ehQuality by rememberSaveable { mutableStateOf(ServicesPrefs.electronhubQuality(context)) }
+    var bflUpsampling by rememberSaveable { mutableStateOf(ServicesPrefs.bflUpsampling(context)) }
+    var hfModelId by rememberSaveable { mutableStateOf(ServicesPrefs.huggingfaceModelId(context)) }
     fun save() = ServicesPrefs.saveImage(context, source, url, model, steps)
     fun saveAdvanced() = ServicesPrefs.saveImageAdvanced(
         context,
@@ -435,6 +456,142 @@ private fun ImageCard() {
         ToggleRow("自由模式 LLM 扩写（free_extend）", freeExtend) {
             freeExtend = it; ServicesPrefs.saveImageModeToggle(context, "sd_free_extend", it)
         }
+        // 官方 settings.html 通用区：snap / minimal_prompt_processing（L34-L40）
+        ToggleRow("吸附已知分辨率（snap，SDXL 推荐）", snap) {
+            snap = it; ServicesPrefs.saveImageModeToggle(context, "sd_snap", it)
+        }
+        ToggleRow("最小 prompt 后处理（保留 JSON 结构输出）", minimalPromptProcessing) {
+            minimalPromptProcessing = it; ServicesPrefs.saveImageModeToggle(context, "sd_minimal_prompt_processing", it)
+        }
+        // ---- per-source 选项（官方 settings.html data-sd-source 区段 1:1）----
+        if (source == "novel") {
+            // 官方 novel 区（L164-L178 + L562-L579）
+            ToggleRow("避免消耗 Anlas（免费档自动调参）", novelAnlasGuard) {
+                novelAnlasGuard = it; ServicesPrefs.saveImageModeToggle(context, "sd_novel_anlas_guard", it)
+            }
+            ToggleRow("SMEA（高分辨率采样优化）", novelSm) {
+                novelSm = it; ServicesPrefs.saveImageModeToggle(context, "sd_novel_sm", it)
+            }
+            if (novelSm) {
+                // 官方 SMEA 关闭时禁用 DYN 输入（disabled），此处以隐藏等价呈现
+                ToggleRow("DYN（变化更大，极高分辨率可能失败）", novelSmDyn) {
+                    novelSmDyn = it; ServicesPrefs.saveImageModeToggle(context, "sd_novel_sm_dyn", it)
+                }
+            }
+            ToggleRow("Decrisper（降低高 CFG 伪影）", novelDecrisper) {
+                novelDecrisper = it; ServicesPrefs.saveImageModeToggle(context, "sd_novel_decrisper", it)
+            }
+            ToggleRow("Variety+（提升多样性饱和度）", novelVarietyBoost) {
+                novelVarietyBoost = it; ServicesPrefs.saveImageModeToggle(context, "sd_novel_variety_boost", it)
+            }
+        }
+        if (source == "horde") {
+            // 官方 horde 区（L149-L162）：nsfw 直连因官方服务端笔误从不生效；sanitize 默认开
+            ToggleRow("允许 NSFW 图像（直连路径官方不生效）", hordeNsfw) {
+                hordeNsfw = it; ServicesPrefs.saveImageModeToggle(context, "sd_horde_nsfw", it)
+            }
+            ToggleRow("清洗提示词（推荐）", hordeSanitize) {
+                hordeSanitize = it; ServicesPrefs.saveImageModeToggle(context, "sd_horde_sanitize", it)
+            }
+            ToggleRow("Karras（部分采样器不支持；extras 路径生效）", hordeKarras) {
+                hordeKarras = it; ServicesPrefs.saveImageModeToggle(context, "sd_horde_karras", it)
+            }
+        }
+        if (source == "openai") {
+            // 官方按模型族显示（data-sd-model，settings.html L192-L226）
+            val m = model.lowercase()
+            if (m.contains("dall-e-3")) {
+                MenuPicker(
+                    "图像风格（dall-e-3）",
+                    if (openaiStyle == "natural") "Natural" else "Vivid",
+                    listOf(DropdownOption("vivid", "Vivid"), DropdownOption("natural", "Natural")),
+                ) {
+                    openaiStyle = it; ServicesPrefs.saveImageString(context, "sd_openai_style", it)
+                }
+                MenuPicker(
+                    "图像质量（dall-e-3）",
+                    if (openaiQuality == "hd") "HD" else "Standard",
+                    listOf(DropdownOption("standard", "Standard"), DropdownOption("hd", "HD")),
+                ) {
+                    openaiQuality = it; ServicesPrefs.saveImageString(context, "sd_openai_quality", it)
+                }
+            }
+            if (m.contains("gpt-image")) {
+                MenuPicker(
+                    "图像质量（gpt-image）",
+                    when (openaiQualityGpt) {
+                        "low" -> "Low"; "medium" -> "Medium"; "high" -> "High"; else -> "Auto"
+                    },
+                    listOf(
+                        DropdownOption("auto", "Auto"), DropdownOption("low", "Low"),
+                        DropdownOption("medium", "Medium"), DropdownOption("high", "High"),
+                    ),
+                ) {
+                    openaiQualityGpt = it; ServicesPrefs.saveImageString(context, "sd_openai_quality_gpt", it)
+                }
+            }
+        }
+        if (source == "stability") {
+            // 官方 stability 区 Style Preset（settings.html L320-L342，17 项，默认 anime）
+            val presets = listOf(
+                "anime" to "Anime", "3d-model" to "3D Model", "analog-film" to "Analog Film",
+                "cinematic" to "Cinematic", "comic-book" to "Comic Book", "digital-art" to "Digital Art",
+                "enhance" to "Enhance", "fantasy-art" to "Fantasy Art", "isometric" to "Isometric",
+                "line-art" to "Line Art", "low-poly" to "Low Poly", "modeling-compound" to "Modeling Compound",
+                "neon-punk" to "Neon Punk", "origami" to "Origami", "photographic" to "Photographic",
+                "pixel-art" to "Pixel Art", "tile-texture" to "Tile Texture",
+            )
+            MenuPicker(
+                "风格预设（style_preset）",
+                presets.firstOrNull { it.first == stabilityStylePreset }?.second ?: "Anime",
+                presets.map { DropdownOption(it.first, it.second) },
+            ) {
+                stabilityStylePreset = it; ServicesPrefs.saveImageString(context, "sd_stability_style_preset", it)
+            }
+        }
+        if (source == "google") {
+            // 官方 google 区（settings.html L403-L417）：enhance 默认开；duration 属 Veo 视频分支（未接）
+            ToggleRow("Enhance（LLM 提示词增强）", googleEnhance) {
+                googleEnhance = it; ServicesPrefs.saveImageModeToggle(context, "sd_google_enhance", it)
+            }
+        }
+        if (source == "electronhub") {
+            // 官方 ensureElectronHubQualitySelect（index.js L2047-L2084）：拉 /v1/models 取当前模型
+            // qualities；无 qualities 隐藏行并置 undefined；有则未选时默认第一项并落盘
+            var ehQualities by remember { mutableStateOf<List<String>>(emptyList()) }
+            LaunchedEffect(source, model, apiKey) {
+                ehQualities = ImageGenBackendsCloud.electronhubFetchQualities(model, apiKey)
+                if (ehQualities.isNotEmpty() && !ehQualities.contains(ehQuality)) {
+                    ehQuality = ehQualities.first()
+                    ServicesPrefs.saveImageString(context, "sd_electronhub_quality", ehQuality)
+                }
+            }
+            if (ehQualities.isNotEmpty()) {
+                val effective = if (ehQualities.contains(ehQuality)) ehQuality else ehQualities.first()
+                MenuPicker(
+                    "图像质量（electronhub）",
+                    effective,
+                    ehQualities.map { DropdownOption(it, it) },
+                ) {
+                    ehQuality = it; ServicesPrefs.saveImageString(context, "sd_electronhub_quality", it)
+                }
+            }
+        }
+        if (source == "google") {
+            ToggleRow("Enhance（LLM 提示词增强）", pollinationsEnhance) {
+                pollinationsEnhance = it; ServicesPrefs.saveImageModeToggle(context, "sd_pollinations_enhance", it)
+            }
+        }
+        if (source == "bfl") {
+            ToggleRow("Prompt Upsampling（自动润色提示词）", bflUpsampling) {
+                bflUpsampling = it; ServicesPrefs.saveImageModeToggle(context, "sd_bfl_upsampling", it)
+            }
+        }
+        if (source == "huggingface") {
+            TextFieldRow("Model ID（如 black-forest-labs/FLUX.1-dev）", hfModelId) {
+                hfModelId = it; ServicesPrefs.saveImageString(context, "sd_huggingface_model_id", it)
+            }
+        }
         PromptTemplatesSection()
         TextFieldRow("CLIP skip", clipSkip) { clipSkip = it; saveAdvanced() }
         TextFieldRow("VAE（留空=默认）", vae) { vae = it; saveAdvanced() }
@@ -508,6 +665,14 @@ private fun ComfyWorkflowSection() {
     }
 
     if (editorOpen) {
+        // 官方 comfyWorkflowEditor：自定义占位符随弹窗打开载入、保存时落盘
+        var customPhs by remember { mutableStateOf(ServicesPrefs.comfyPlaceholders(context)) }
+        // 官方 comfyWorkflowEditor.html 标准清单（含 seed 特殊项；user_avatar/char_avatar 头像注入未接，登记偏差）
+        val standardKeys = listOf(
+            "prompt", "negative_prompt", "model", "vae", "sampler", "scheduler",
+            "steps", "scale", "denoise", "clip_skip", "width", "height", "user_avatar", "char_avatar",
+        )
+        fun mark(key: String) = if (draftJson.contains("\"%$key%\"")) "✅" else "❌"
         AlertDialog(
             onDismissRequest = { editorOpen = false },
             title = { Text("编辑 Workflow：$active") },
@@ -521,18 +686,59 @@ private fun ComfyWorkflowSection() {
                         maxLines = 16,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    // 官方 checkPlaceholders：✅=workflow 里存在 "%key%"，❌=缺失（随输入实时刷新）
                     Text(
-                        "占位符：%prompt% / %negative_prompt% / %model% / %seed% / %steps% / %width% / %height% / %sampler% / %scheduler% / %scale% / %denoise% / %clip_skip% / %vae%",
+                        standardKeys.joinToString(" ") { "${mark(it)} %$it%" } +
+                            "  ${mark("seed")} %seed%（每次生成随机）",
                         style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(top = 8.dp),
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "自定义占位符",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { customPhs = customPhs + Pair("", "") }) { Text("＋ 添加") }
+                    }
+                    customPhs.forEachIndexed { i, ph ->
+                        val key = ph.first
+                        Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "${mark(key)} \"%$key%\"",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = EmberTheme.colors.inkMute,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                TextButton(onClick = { customPhs = customPhs.filterIndexed { j, _ -> j != i } }) {
+                                    Text("⊘")
+                                }
+                            }
+                            ShellInput(
+                                value = ph.first,
+                                onValueChange = { v -> customPhs = customPhs.mapIndexed { j, p -> if (j == i) Pair(v, p.second) else p } },
+                                label = "find（workflow 里的 %…%）",
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            ShellInput(
+                                value = ph.second,
+                                onValueChange = { v -> customPhs = customPhs.mapIndexed { j, p -> if (j == i) Pair(p.first, v) else p } },
+                                label = "replace（支持 {{user}} 等宏）",
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     if (draftJson.trim().isNotEmpty()) {
                         store.write(active, draftJson)
+                        ServicesPrefs.saveComfyPlaceholders(context, customPhs)
                         refresh()
                     } else {
                         Toast.makeText(context, "workflow JSON 不能为空", Toast.LENGTH_SHORT).show()

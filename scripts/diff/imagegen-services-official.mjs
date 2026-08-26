@@ -611,7 +611,7 @@ function resolveComfySeed(seedSetting, random01) {
 // 的两份列表；settings 模拟 extension_settings.sd 的对应键。
 // 不差分（登记）：comfy_placeholders 自定义替换（官方默认 []，App 无该 UI）、
 //   %user_avatar%/%char_avatar%（需 fetch 头像转 base64，接线层行为）。
-function replaceComfyWorkflow(workflow, seed, denoisingStrength, clipSkip, settings, placeholders, prompt, negativePrompt) {
+function replaceComfyWorkflow(workflow, seed, denoisingStrength, clipSkip, settings, placeholders, prompt, negativePrompt, customPlaceholders = []) {
     let w = workflow.replaceAll('"%prompt%"', JSON.stringify(prompt));
     w = w.replaceAll('"%negative_prompt%"', JSON.stringify(negativePrompt));
     w = w.replaceAll('"%seed%"', JSON.stringify(seed));
@@ -624,6 +624,10 @@ function replaceComfyWorkflow(workflow, seed, denoisingStrength, clipSkip, setti
 
     placeholders.forEach(ph => {
         w = w.replaceAll(`"%${ph}%"`, JSON.stringify(settings[ph]));
+    });
+    // 官方 L4248-L4250：comfy_placeholders 自定义 {find,replace}，replace 已过 substituteParams
+    customPlaceholders.forEach(ph => {
+        w = w.replaceAll(`"%${ph.find}%"`, JSON.stringify(ph.replace));
     });
     return w;
 }
@@ -785,6 +789,25 @@ add('comfy-replace-repeated-occurrence', 'comfy-replace',
       settings: { ...COMFY_SETTINGS_DEFAULTS, scale: 4 }, runPod: false },
     { result: replaceComfyWorkflow('"%prompt%" and "%prompt%" cfg "%scale%" scale "%scale%"', 9, 0.8, 2,
         { ...COMFY_SETTINGS_DEFAULTS, scale: 4 }, PH_COMFY, 'dup', '') });
+add('comfy-replace-custom-placeholders', 'comfy-replace',
+    // comfy_placeholders 自定义占位符：标准组之后按序替换；replace 含引号/换行走 JSON 转义
+    { workflow: '{"1":{"text":"%prompt%","custom":"%my_lora%","other":"%aspect%"},"2":{"custom":"%my_lora%"}}',
+      prompt: 'p', negativePrompt: 'n', seed: String(3), denoisingStrength: 0.7, clipSkip: 1,
+      settings: COMFY_SETTINGS_DEFAULTS, runPod: false,
+      customPlaceholders: [
+        { find: 'my_lora', replace: 'lora "x"\\n' },
+        { find: 'aspect', replace: '9:16' },
+      ] },
+    { result: replaceComfyWorkflow(
+        '{"1":{"text":"%prompt%","custom":"%my_lora%","other":"%aspect%"},"2":{"custom":"%my_lora%"}}',
+        3, 0.7, 1, COMFY_SETTINGS_DEFAULTS, PH_COMFY, 'p', 'n',
+        [{ find: 'my_lora', replace: 'lora "x"\\n' }, { find: 'aspect', replace: '9:16' }]) });
+add('comfy-replace-custom-empty-list', 'comfy-replace',
+    // 无自定义占位符 → 与原行为一致（默认参数路径）
+    { workflow: TMPL_FULL, prompt: 'plain', negativePrompt: '',
+      seed: String(11), denoisingStrength: 1.0, clipSkip: 0,
+      settings: COMFY_SETTINGS_DEFAULTS, runPod: true },
+    { result: replaceComfyWorkflow(TMPL_FULL, 11, 1.0, 0, COMFY_SETTINGS_DEFAULTS, PH_RUNPOD, 'plain', '') });
 
 // ============ Comfy resolveComfySeed cases ============
 // 官方 L4235：settings.seed >= 0 ? seed : Math.round(random01 * Number.MAX_SAFE_INTEGER)
@@ -803,6 +826,121 @@ add('comfy-seed-random-one-max-safe', 'comfy-seed-resolve',
     // random01=1 → Number.MAX_SAFE_INTEGER 本身
     { seed: String(-1), random01: '1' },
     { result: String(resolveComfySeed(-1, 1)) });
+
+// ============ NovelAI getNovelParams cases ============
+// 官方 stable-diffusion/index.js L4002-L4059 逐字（steps=min(设置,50)；ddim/v4 模型强制关 SMEA；
+// anlas guard 尺寸/步数钳制）。
+function getNovelParams(steps, width, height, sampler, model, novelSm, novelSmDyn, anlasGuard) {
+    steps = Math.min(steps, 50);
+    let sm = novelSm;
+    let sm_dyn = novelSmDyn;
+
+    if (sampler === 'ddim' ||
+        ['nai-diffusion-4-curated-preview', 'nai-diffusion-4-full'].includes(model)) {
+        sm = false;
+        sm_dyn = false;
+    }
+
+    if (!anlasGuard) {
+        return { steps, width, height, sm, sm_dyn };
+    }
+
+    const MAX_STEPS = 28;
+    const MAX_PIXELS = 1024 * 1024;
+
+    if (width * height > MAX_PIXELS) {
+        const ratio = Math.sqrt(MAX_PIXELS / (width * height));
+
+        let newWidth = Math.round(width * ratio);
+        let newHeight = Math.round(height * ratio);
+
+        if (newWidth % 64 !== 0) {
+            newWidth = newWidth - newWidth % 64;
+        }
+        if (newHeight % 64 !== 0) {
+            newHeight = newHeight - newHeight % 64;
+        }
+        while (newWidth * newHeight > MAX_PIXELS) {
+            if (newWidth > newHeight) {
+                newWidth -= 64;
+            } else {
+                newHeight -= 64;
+            }
+        }
+        width = newWidth;
+        height = newHeight;
+    }
+
+    if (steps > MAX_STEPS) {
+        steps = MAX_STEPS;
+    }
+
+    return { steps, width, height, sm, sm_dyn };
+}
+
+const np = (o) => ({ steps: o.steps, width: o.width, height: o.height, sm: o.sm, smDyn: o.sm_dyn });
+add('novel-params-default-no-guard', 'novel-params',
+    // 默认设置：仅 steps min50；sm 原样透传
+    { steps: 20, width: 512, height: 768, sampler: 'euler', model: 'nai-diffusion-3',
+      novelSm: false, novelSmDyn: false, anlasGuard: false },
+    np(getNovelParams(20, 512, 768, 'euler', 'nai-diffusion-3', false, false, false)));
+add('novel-params-steps-clamp-50', 'novel-params',
+    // 步数超 50 截断
+    { steps: 150, width: 832, height: 1216, sampler: 'k_euler_ancestral', model: 'nai-diffusion-3',
+      novelSm: true, novelSmDyn: true, anlasGuard: false },
+    np(getNovelParams(150, 832, 1216, 'k_euler_ancestral', 'nai-diffusion-3', true, true, false)));
+add('novel-params-ddim-forces-sm-off', 'novel-params',
+    // ddim → sm/sm_dyn 强制 false
+    { steps: 28, width: 1024, height: 1024, sampler: 'ddim', model: 'nai-diffusion-3',
+      novelSm: true, novelSmDyn: true, anlasGuard: false },
+    np(getNovelParams(28, 1024, 1024, 'ddim', 'nai-diffusion-3', true, true, false)));
+add('novel-params-v4-full-forces-sm-off', 'novel-params',
+    // nai-diffusion-4-full 模型 → 强制关；4-curated-preview 同规则
+    { steps: 30, width: 512, height: 512, sampler: 'euler', model: 'nai-diffusion-4-full',
+      novelSm: true, novelSmDyn: true, anlasGuard: false },
+    np(getNovelParams(30, 512, 512, 'euler', 'nai-diffusion-4-full', true, true, false)));
+add('novel-params-anlas-guard-large-shrink', 'novel-params',
+    // 1536x1536=2359296 > 1048576：ratio=sqrt(1048576/2359296)，取整到 64 后仍可能超 → while 下调
+    { steps: 40, width: 1536, height: 1536, sampler: 'euler', model: 'nai-diffusion-3',
+      novelSm: false, novelSmDyn: false, anlasGuard: true },
+    np(getNovelParams(40, 1536, 1536, 'euler', 'nai-diffusion-3', false, false, true)));
+add('novel-params-anlas-guard-small-untouched', 'novel-params',
+    // 832x1216=1011712 ≤ 1048576：尺寸不动，仅 steps>28 截为 28
+    { steps: 45, width: 832, height: 1216, sampler: 'euler', model: 'nai-diffusion-3',
+      novelSm: true, novelSmDyn: true, anlasGuard: true },
+    np(getNovelParams(45, 832, 1216, 'euler', 'nai-diffusion-3', true, true, true)));
+add('novel-params-anlas-guard-exact-multiple', 'novel-params',
+    // 2048x1408 恰好 ratio 取整后仍需 while 循环下调的边界形态
+    { steps: 10, width: 2048, height: 1408, sampler: 'euler', model: 'nai-diffusion-2',
+      novelSm: false, novelSmDyn: false, anlasGuard: true },
+    np(getNovelParams(10, 2048, 1408, 'euler', 'nai-diffusion-2', false, false, true)));
+
+// ============ NovelAI calculateSkipCfgAboveSigma cases ============
+// 官方 src/endpoints/novelai.js L120-L128（魔数 19 / V4.5 为 58；参考像素 1011712=832*1216）。
+function calculateSkipCfgAboveSigma(width, height, modelName) {
+    const magicConstant = modelName?.includes('nai-diffusion-4-5')
+        ? 58
+        : 19;
+    const pixelCount = width * height;
+    const ratio = pixelCount / 1011712;
+    return Math.pow(ratio, 0.5) * magicConstant;
+}
+add('skip-cfg-sigma-reference-size-v3', 'skip-cfg-sigma',
+    // 参考尺寸 832*1216、V3 模型 → 魔数 19 本身
+    { width: 832, height: 1216, model: 'nai-diffusion-3' },
+    { result: calculateSkipCfgAboveSigma(832, 1216, 'nai-diffusion-3') });
+add('skip-cfg-sigma-v45-magic-58', 'skip-cfg-sigma',
+    // 模型名含 nai-diffusion-4-5 → 58（includes 子串匹配）
+    { width: 832, height: 1216, model: 'nai-diffusion-4-5-full' },
+    { result: calculateSkipCfgAboveSigma(832, 1216, 'nai-diffusion-4-5-full') });
+add('skip-cfg-sigma-square-sdxl', 'skip-cfg-sigma',
+    // 1024x1024 → sqrt(1048576/1011712)*19 非整浮点
+    { width: 1024, height: 1024, model: 'nai-diffusion' },
+    { result: calculateSkipCfgAboveSigma(1024, 1024, 'nai-diffusion') });
+add('skip-cfg-sigma-null-model-defaults-19', 'skip-cfg-sigma',
+    // 官方 ?? 'nai-diffusion' 兜底前 includes 判定对 null 安全（?. 可选链）
+    { width: 512, height: 512, model: null },
+    { result: calculateSkipCfgAboveSigma(512, 512, null) });
 
 writeFileSync(outFile, JSON.stringify({ cases }, null, 2) + '\n');
 console.log(`imagegen-services fixtures: ${cases.length} cases -> ${outFile}`);

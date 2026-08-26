@@ -94,7 +94,10 @@ object ImageGenBackendsLlm {
             // 引擎层：客户端 body（fetch /api/google/generate-image 的对象）
             val clientBody = ImageGenRequestEngine.googleClientBody(
                 prompt = prompt, aspectRatio = aspect, negativePrompt = negativePrompt, model = model,
-                enhance = null, api = null, seed = ServicesPrefs.imageSeed(context).takeIf { it >= 0 },
+                // 官方客户端恒发 enhance（默认 true）+ api 兜底 'makersuite'（index.js L4615-L4616）
+                enhance = ServicesPrefs.googleEnhance(context),
+                api = ServicesPrefs.googleApi(context).ifBlank { "makersuite" },
+                seed = ServicesPrefs.imageSeed(context).takeIf { it >= 0 },
                 vertexAuthMode = null, vertexRegion = null, vertexProject = null,
             )
             // 接线：翻译为 Vertex AI predict 的实例 body
@@ -313,7 +316,8 @@ object ImageGenBackendsLlm {
                 height = ServicesPrefs.imageHeight(context),
                 restoreFaces = ServicesPrefs.imageRestoreFaces(context),
                 enableHr = ServicesPrefs.imageEnableHr(context),
-                hordeKarras = false,
+                // 官方 L3543：karras: !!extension_settings.sd.horde_karras（默认 true）
+                hordeKarras = ServicesPrefs.imageHordeKarras(context),
                 hrUpscaler = ServicesPrefs.imageHrUpscaler(context),
                 hrScale = ServicesPrefs.imageHrScale(context),
                 denoisingStrength = ServicesPrefs.imageDenoisingStrength(context),

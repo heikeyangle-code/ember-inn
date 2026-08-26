@@ -728,7 +728,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 _notice.value = "（生图提示词生成失败：${e.message ?: "未知错误"}）"
                 return@launch
             }
-            val processed = ImageGenPromptEngine.processReply(prompt, false)
+            // 官方 processReply 按 sd_minimal_prompt_processing 分支（index.js L2901）
+            val processed = ImageGenPromptEngine.processReply(prompt, ServicesPrefs.imageMinimalPromptProcessing(ctx))
             if (processed.isBlank()) {
                 _notice.value = "（生图提示词生成失败：内容为空。）"
                 return@launch

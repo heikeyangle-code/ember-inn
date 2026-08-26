@@ -1,6 +1,8 @@
 package com.emberinn.app.data
 
 import android.content.Context
+import com.emberinn.engine.macros.MacroEngine
+import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.prompt.ImageGenRequestEngine
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.app.ui.settings.ServicesPrefs
@@ -58,7 +60,7 @@ class ImageGenClient {
                 "openai" -> openAi(context, fullPrompt)
                 "sdcpp" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = true)
                 "novel" -> novel(context, fullPrompt, fullNegative, model, apiKey)
-                "huggingface" -> huggingface(context, fullPrompt, model, apiKey)
+                "huggingface" -> huggingface(context, fullPrompt, apiKey)
                 "horde" -> horde(context, fullPrompt, fullNegative, model, apiKey)
                 "vlad" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = false) // SD.Next 同走 /sdapi/v1/txt2img（vladmandic/automatic1111 API 兼容）；登记：sd_vlad_url 字段并入 sd_url
                 "comfy" -> if (ServicesPrefs.comfyType(context) == "runpod_serverless") {
@@ -77,9 +79,10 @@ class ImageGenClient {
     }
 
     /**
-     * /imagine 入口（官方 applyCommandArguments index.js L5384-L5408 语义）：把命令命名参数临时
+     * /imagine 入口（官方 applyCommandArguments index.js L5384-L5443 语义）：把命令命名参数临时
      * 写入 SD 设置，生成后在 finally 恢复原值（官方 Object.assign(extension_settings.sd, currentSettings)）。
-     * settingMap 覆盖官方全部设置类参数；edit/extend/multimodal/processing 对应功能未接入——忽略。
+     * settingMap 覆盖官方全部设置类参数（含 processing 枚举 standard/minimal）；bool 解析对齐
+     * isTrueBoolean/isFalseBoolean。edit/extend/multimodal 对应功能未接入——忽略。
      */
     suspend fun generateWithOverrides(
         context: Context,
@@ -106,7 +109,23 @@ class ImageGenClient {
                     "long" -> editor.putLong(key, value.toDoubleOrNull()?.toLong() ?: -1L)
                     "int" -> editor.putInt(key, value.toDoubleOrNull()?.toInt() ?: 0)
                     "float" -> editor.putFloat(key, value.toFloatOrNull() ?: 0f)
-                    "bool" -> editor.putBoolean(key, value.equals("true", ignoreCase = true))
+                    // 官方 boolean 分支：isTrueBoolean(v) || !isFalseBoolean(v)（utils.js L1011-L1022，
+                    // trim+小写后 on/true/1 与 off/false/0，其余字符串一律 true）
+                    "bool" -> {
+                        val v = value.trim().lowercase()
+                        val isTrue = v in setOf("on", "true", "1")
+                        val isFalse = v in setOf("off", "false", "0")
+                        editor.putBoolean(key, isTrue || !isFalse)
+                    }
+                    // 官方 enumHandlers.processing：/standard/i → false、/minimal/i → true、其余不覆盖
+                    "processing" -> {
+                        val enumValue = when {
+                            Regex("standard", RegexOption.IGNORE_CASE).containsMatchIn(value) -> false
+                            Regex("minimal", RegexOption.IGNORE_CASE).containsMatchIn(value) -> true
+                            else -> null
+                        }
+                        if (enumValue != null) editor.putBoolean(key, enumValue) else continue
+                    }
                     else -> editor.putString(key, value)
                 }
             }
@@ -147,6 +166,8 @@ class ImageGenClient {
         "denoise" to Pair("sd_denoising_strength", "float"),
         "2ndpass" to Pair("sd_hr_second_pass_steps", "int"),
         "faces" to Pair("sd_restore_faces", "bool"),
+        // 官方 enumHandlers.processing（index.js L5410-L5419）：standard/minimal 枚举
+        "processing" to Pair("sd_minimal_prompt_processing", "processing"),
     )
 
     /**
@@ -203,8 +224,8 @@ class ImageGenClient {
      * - size：默认 1024x1024；dall-e-3 宽高比 <1 → 高 1792、>1 → 宽 1792；gpt-image → 1536；
      *   dall-e-2 且 w,h≤512 → 512x512。
      * - quality/style/response_format/moderation 按模型族条件发送；undefined 字段不序列化。
-     *   openai_quality/openai_style/openai_quality_gpt App 无 UI → 官方默认值 'standard'/'vivid'/'auto'
-     *   （defaultSettings L328-L330）——登记 #16。sora-2 视频分支未接——登记偏差。
+     *   openai_quality/openai_style/openai_quality_gpt 读 ServicesPrefs（官方默认 'standard'/'vivid'/'auto'，
+     *   defaultSettings L328-L330）。sora-2 视频分支未接——登记偏差。
      * - key 复用 OpenAI 提供商档案（官方读 SECRET_KEYS.OPENAI）。
      */
     private fun openAi(context: Context, prompt: String): String? {
@@ -238,14 +259,15 @@ class ImageGenClient {
             .put("model", model)
             .put("size", "${width}x${height}")
             .put("n", 1)
-        // 官方 undefined 字段被 JSON.stringify 丢弃 → 仅对应模型族才 put
+        // 官方 undefined 字段被 JSON.stringify 丢弃 → 仅对应模型族才 put；
+        // quality/style 读 sd_openai_quality / sd_openai_style / sd_openai_quality_gpt（默认 standard/vivid/auto）
         if (isDalle3) {
-            payload.put("quality", "standard")
-            payload.put("style", "vivid")
+            payload.put("quality", ServicesPrefs.openaiQuality(context))
+            payload.put("style", ServicesPrefs.openaiStyle(context))
             payload.put("response_format", "b64_json")
         }
         if (isGptImg) {
-            payload.put("quality", "auto")
+            payload.put("quality", ServicesPrefs.openaiQualityGpt(context))
             payload.put("moderation", "low")
         }
         if (isDalle2) payload.put("response_format", "b64_json")
@@ -323,6 +345,15 @@ class ImageGenClient {
      *   按官方默认 false/false/null 发送；variety+ 公式 calculateSkipCfgAboveSigma（服务端 L120-L129）
      *   与 upscale 二次调用（upscale_ratio>1 → /ai/upscale）未接——登记偏差待 #16。
      */
+    /**
+     * NovelAI 直连（官方客户端 generateNovelImage index.js L3963-L3987 + 服务端 novelai.js
+     * /generate-image L300-L400 合并）：调参走引擎层 [ImageGenRequestEngine.getNovelParams]
+     * （差分 7 例：steps min50 / anlas guard 尺寸步数钳制 / ddim·v4 强制关 SMEA）；
+     * decrisper→dynamic_thresholding、sm/sm_dyn 透传、variety_boost→skip_cfg_above_sigma =
+     * [ImageGenRequestEngine.calculateSkipCfgAboveSigma]（差分 4 例，魔数 19/58）；调度器白名单外回退
+     * 'karras'（官方 getNovelParams 内的设置归一副作用等价实现）。model 原样发送（官方服务端
+     * request.body.model ?? 'nai-diffusion' 对空串不触发，默认设置即发空串）。
+     */
     private fun novel(context: Context, prompt: String, negativePrompt: String, model: String, apiKey: String): String? {
         if (apiKey.isBlank()) return null
         val seedPref = ServicesPrefs.imageSeed(context)
@@ -330,17 +361,28 @@ class ImageGenClient {
         val schedulers = listOf("karras", "native", "exponential", "polyexponential")
         val schedulerPref = ServicesPrefs.imageScheduler(context)
         val noiseSchedule = if (schedulerPref in schedulers) schedulerPref else "karras"
+        val np = ImageGenRequestEngine.getNovelParams(
+            steps = ServicesPrefs.imageSteps(context),
+            width = ServicesPrefs.imageWidth(context),
+            height = ServicesPrefs.imageHeight(context),
+            sampler = ServicesPrefs.imageSampler(context),
+            model = model,
+            novelSm = ServicesPrefs.novelSm(context),
+            novelSmDyn = ServicesPrefs.novelSmDyn(context),
+            anlasGuard = ServicesPrefs.novelAnlasGuard(context),
+        )
+        val varietyBoost = ServicesPrefs.novelVarietyBoost(context)
         val parameters = JSONObject()
             .put("params_version", 3)
             .put("prefer_brownian", true)
             .put("negative_prompt", negativePrompt)
-            .put("height", ServicesPrefs.imageHeight(context))
-            .put("width", ServicesPrefs.imageWidth(context))
+            .put("height", np.height)
+            .put("width", np.width)
             .put("scale", ServicesPrefs.imageScale(context))
             .put("seed", seed)
             .put("sampler", ServicesPrefs.imageSampler(context))
             .put("noise_schedule", noiseSchedule)
-            .put("steps", ServicesPrefs.imageSteps(context).coerceAtMost(50))
+            .put("steps", np.steps)
             .put("n_samples", 1)
             // NAI handholding for prompts
             .put("ucPreset", 0)
@@ -349,15 +391,21 @@ class ImageGenClient {
             .put("controlnet_strength", 1)
             .put("deliberate_euler_ancestral_bug", false)
             // 官方 dynamic_thresholding = decrisper ?? false
-            .put("dynamic_thresholding", false)
+            .put("dynamic_thresholding", ServicesPrefs.novelDecrisper(context))
             .put("legacy", false)
             .put("legacy_v3_extend", false)
-            // 官方 sm/sm_dyn = novel_sm/novel_sm_dyn ?? false（ddim/v4 模型强制 false）
-            .put("sm", false)
-            .put("sm_dyn", false)
+            .put("sm", np.sm)
+            .put("sm_dyn", np.smDyn)
             .put("uncond_scale", 1)
             // 官方 variety_boost ? calculateSkipCfgAboveSigma(w,h,model) : null
-            .put("skip_cfg_above_sigma", JSONObject.NULL)
+            .put(
+                "skip_cfg_above_sigma",
+                if (varietyBoost) {
+                    ImageGenRequestEngine.calculateSkipCfgAboveSigma(np.width, np.height, model)
+                } else {
+                    JSONObject.NULL
+                },
+            )
             .put("use_coords", false)
             .put("characterPrompts", JSONArray())
             .put("reference_image_multiple", JSONArray())
@@ -381,7 +429,8 @@ class ImageGenClient {
         val payload = JSONObject()
             .put("action", "generate")
             .put("input", prompt)
-            .put("model", model.ifBlank { "nai-diffusion-3" })
+            // 官方服务端 request.body.model ?? 'nai-diffusion'：?? 对空串不触发，默认设置即发空串
+            .put("model", model)
             .put("parameters", parameters)
             .toString()
         val request = Request.Builder()
@@ -408,19 +457,23 @@ class ImageGenClient {
 
     /**
      * Stable Horde：官方客户端 generateHordeImage（index.js L3757-L3778）+ 服务端 horde.js
-     * /generate-image（L309-L400）合并 1:1——截断(5000-neg-5) + sanitizeHordeImagePrompt +
-     * POST /api/v2/generate/async，轮询 /check/{id}（3000ms×200）至 done，/status/{id} 取图。
+     * /generate-image（L309-L400）合并 1:1——截断(5000-neg-5) + 按 sd_horde_sanitize 开关做
+     * sanitizeHordeImagePrompt + POST /api/v2/generate/async，轮询 /check/{id}（3000ms×200）至
+     * done，/status/{id} 取图。
      * 参数全读 ServicesPrefs（官方读 extension_settings.sd.*）：sampler/scale/steps（原样不截断）/
      * width/height/enable_hr→hires_fix/restore_faces→use_gfpgan/clip_skip；seed 仅 sd_seed>=0 时
      * 发字符串，否则省略由 Horde 随机。
-     * 官方怪点：generateHordeImage 不发 karras 字段 → 服务端 Boolean(undefined)=false（非 defaultSettings
-     * 的 horde_karras:true，该键用于其他后端 L3543）。sanitize 恒开（horde_sanitize 默认 true）、
-     * nsfw=false（horde_nsfw 默认），App 无这两个开关 UI——登记 #16。model 原样发送无兜底。
+     * 官方怪点①：generateHordeImage 不发 karras 字段 → 服务端 Boolean(undefined)=false（非
+     * defaultSettings 的 horde_karras:true，该键用于 extras 路径 L3543）。
+     * 官方怪点②：客户端发 nsfw 但服务端读 request.body.nfsw（笔误，undefined）→ JSON 序列化时
+     * 键被丢弃 → 直连 Horde 从不发送 nsfw。为保 1:1 App 同样省略（sd_horde_nsfw 开关仅存档）。
+     * model 原样发送无兜底。
      */
     private fun horde(context: Context, prompt: String, negativePrompt: String, model: String, apiKey: String): String? {
         val maxLength = 5000 - negativePrompt.length - 5
         val safePrompt = if (prompt.length > maxLength) prompt.substring(0, maxLength) else prompt
-        val sanitized = sanitizeHordePrompt(safePrompt)
+        val sanitized =
+            if (ServicesPrefs.imageHordeSanitize(context)) sanitizeHordePrompt(safePrompt) else safePrompt
         val params = JSONObject()
             .put("sampler_name", ServicesPrefs.imageSampler(context))
             .put("hires_fix", ServicesPrefs.imageEnableHr(context))
@@ -440,7 +493,7 @@ class ImageGenClient {
             .put("prompt", "$sanitized ### $negativePrompt")
             .put("params", params)
             .put("r2", false)
-            .put("nsfw", false)
+            // 官方服务端 body.nfsw 笔误 → nsfw 键从不进入 Horde 请求（怪点②，见上）
             .put("models", JSONArray().put(model))
         val requestBuilder = Request.Builder()
             .url("https://stablehorde.net/api/v2/generate/async")
@@ -509,6 +562,17 @@ class ImageGenClient {
             scale = ServicesPrefs.imageScale(context),
             width = ServicesPrefs.imageWidth(context),
             height = ServicesPrefs.imageHeight(context),
+            // 官方 comfy_placeholders：replace 过 substituteParams；此处用最小宏环境
+            // （user=激活人格，char 名该层不可得 → {{char}} 保留字面，登记偏差）
+            customPlaceholders = ServicesPrefs.comfyPlaceholders(context).map { (f, r) ->
+                Pair(
+                    f,
+                    MacroEngine.substitute(
+                        r,
+                        MacroEnv(user = PersonaStore(context).active()?.name ?: "", char = ""),
+                    ),
+                )
+            },
         )
 
         // 官方模板字符串原样（index.js L4283-4286）：换行与缩进都保留在线上字节里
@@ -574,11 +638,19 @@ class ImageGenClient {
     }
 
     /** Hugging Face Inference：POST /models/{model} {inputs: prompt}，响应为图片原始字节。 */
-    private fun huggingface(context: Context, prompt: String, model: String, apiKey: String): String? {
-        if (apiKey.isBlank() || model.isBlank()) return null
+    /**
+     * Hugging Face Inference（官方客户端 generateHuggingFaceImage index.js L4344-L4360 +
+     * 服务端 stable-diffusion.js L1142-L1179 合并）：POST api-inference.huggingface.co/models/{model_id}
+     * （model 原样插值，官方不 trim），body {inputs: prompt}，Bearer key。model_id 读独立的
+     * sd_huggingface_model_id（官方 settings.html L116 独立输入框，非通用 sd_model）。
+     */
+    private fun huggingface(context: Context, prompt: String, apiKey: String): String? {
+        if (apiKey.isBlank()) return null
+        val modelId = ServicesPrefs.huggingfaceModelId(context)
+        if (modelId.isBlank()) return null
         val payload = JSONObject().put("inputs", prompt).toString()
         val request = Request.Builder()
-            .url("https://api-inference.huggingface.co/models/${model.trim('/')}")
+            .url("https://api-inference.huggingface.co/models/$modelId")
             .post(payload.toRequestBody(jsonMedia))
             .header("Authorization", "Bearer $apiKey")
             .build()

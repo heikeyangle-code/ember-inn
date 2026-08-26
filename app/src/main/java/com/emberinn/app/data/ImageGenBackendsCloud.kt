@@ -99,7 +99,7 @@ object ImageGenBackendsCloud {
      * Pollinations（官方 src/endpoints/stable-diffusion.js pollinations.post('/generate') 1:1，index.js L3491）：
      * GET https://gen.pollinations.ai/image/{urlEncodedPrompt}?model=&negative_prompt=&seed=&width=&height=&enhance=
      * Header Authorization: Bearer apiKey；响应为图片原始字节，format 由 Content-Type 推断（默认 jpg）。
-     * enhance 默认 false（无 ServicesPrefs 对应项）。
+     * enhance 读 sd_pollinations_enhance（官方 defaultSettings L345 默认 false）。
      */
     private suspend fun generatePollinationsImage(context: Context, prompt: String, negativePrompt: String): String? {
         val apiKey = ServicesPrefs.imageApiKey(context)
@@ -114,7 +114,7 @@ object ImageGenBackendsCloud {
             seed = seed,
             width = ServicesPrefs.imageWidth(context),
             height = ServicesPrefs.imageHeight(context),
-            enhance = false,
+            enhance = ServicesPrefs.pollinationsEnhance(context),
         )
         val request = Request.Builder()
             .url(url)
@@ -136,7 +136,7 @@ object ImageGenBackendsCloud {
      * {prompt,negative_prompt,aspect_ratio,output_format=png,seed?,style_preset?}（undefined 省略）
      * 请求体由引擎层 [ImageGenRequestEngine.stabilityPayload] 构造（差分含 stabilityPayload + getClosestAspectRatio）；
      * App 仅按 model 选 endpoint、转 multipart、发请求、保存 png 字节。
-     * style_preset 无 ServicesPrefs 对应项，按官方 undefined 省略。
+     * style_preset 读 sd_stability_style_preset（官方 defaultSettings L354 默认 'anime'，客户端恒发送）。
      */
     private suspend fun generateStabilityImage(context: Context, prompt: String, negativePrompt: String): String? {
         val apiKey = ServicesPrefs.imageApiKey(context)
@@ -150,7 +150,7 @@ object ImageGenBackendsCloud {
         val width = ServicesPrefs.imageWidth(context)
         val height = ServicesPrefs.imageHeight(context)
         val cfgSeed = ServicesPrefs.imageSeed(context)
-        // 引擎层构造（含 aspect_ratio = getClosestAspectRatio('stability')、slice(10000)、style_preset 省略、seed<0 省略）
+        // 引擎层构造（含 aspect_ratio = getClosestAspectRatio('stability')、slice(10000)、seed<0 省略）
         val jsBody = com.emberinn.engine.prompt.ImageGenRequestEngine.stabilityPayload(
             model = model,
             prompt = prompt,
@@ -158,7 +158,7 @@ object ImageGenBackendsCloud {
             width = width,
             height = height,
             seed = cfgSeed.toLong(),
-            stylePreset = null,
+            stylePreset = ServicesPrefs.stabilityStylePreset(context),
         )
         val payload = JSONObject(jsBody.toString()).getJSONObject("payload")
         val formBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
@@ -185,7 +185,7 @@ object ImageGenBackendsCloud {
      * clamp 步数/CFG/尺寸、OpenAI 类 size=n=1、quality/style 省略）；
      * Header Authorization: Bearer apiKey + 官方 AIMLAPI_HEADERS（HTTP-Referer / X-Title）。
      * 响应 images[0] 或 data[0]，优先 b64_json/base64，否则下载 url 转 base64。
-     * openai_quality / openai_style 无 ServicesPrefs 对应项，省略。
+     * 非 SD 类模型的 quality/style 读 sd_openai_quality / sd_openai_style（官方 L4194-L4195 原样透传）。
      */
     private suspend fun generateAimlapiImage(context: Context, prompt: String, negativePrompt: String): String? {
         val apiKey = ServicesPrefs.imageApiKey(context)
@@ -203,8 +203,8 @@ object ImageGenBackendsCloud {
             width = width,
             height = height,
             seed = cfgSeed.toLong(),
-            openaiQuality = null,
-            openaiStyle = null,
+            openaiQuality = ServicesPrefs.openaiQuality(context),
+            openaiStyle = ServicesPrefs.openaiStyle(context),
         ).toString()
         val request = Request.Builder()
             .url("https://api.aimlapi.com/v1/images/generations")
@@ -266,7 +266,8 @@ object ImageGenBackendsCloud {
      * size/quality 空省略）；size 由 App 调 [electronhubClosestSize] 网络 GET /v1/models/{model}.sizes 后
      * 调引擎层 [ImageGenRequestEngine.getClosestSize] 选最近（差分）。
      * Header Authorization: Bearer apiKey → data[0].b64_json。
-     * electronhub_quality 无 ServicesPrefs 对应项，省略。
+     * quality 读 sd_electronhub_quality：官方服务端 String(quality||'').trim() || undefined——
+     * 空串省略（官方默认 undefined），UI 选择后发送。
      */
     private suspend fun generateElectronHubImage(context: Context, prompt: String, negativePrompt: String): String? {
         val apiKey = ServicesPrefs.imageApiKey(context)
@@ -281,7 +282,7 @@ object ImageGenBackendsCloud {
             model = model,
             prompt = prompt,
             size = size,
-            quality = null,
+            quality = ServicesPrefs.electronhubQuality(context).trim().ifBlank { null },
         ).toString()
         val request = Request.Builder()
             .url("https://api.electronhub.ai/v1/images/generations")
@@ -355,7 +356,8 @@ object ImageGenBackendsCloud {
             scale = ServicesPrefs.imageScale(context),
             width = width,
             height = height,
-            promptUpsampling = false,
+            // 官方 index.js L4477：prompt_upsampling: !!sd_bfl_upsampling（默认 false）
+            promptUpsampling = ServicesPrefs.bflUpsampling(context),
             seed = seed,
         ).toString()
         val request = Request.Builder()
@@ -438,6 +440,38 @@ object ImageGenBackendsCloud {
     }
 
     // ---- helpers（仅保留 App 层特有：网络 + 落盘；纯逻辑见引擎层 ImageGenRequestEngine）----
+
+    /**
+     * 取 ElectronHub 模型 qualities 数组（官方 ensureElectronHubQualitySelect index.js L2047-L2084：
+     * GET /v1/models 后按 id 匹配且 endpoints 含 '/v1/images/generations' 的模型项取其 qualities）。
+     * 无 key/模型不匹配/无 qualities → 空表（官方此时隐藏选择行并置 electronhub_quality=undefined）。
+     */
+    fun electronhubFetchQualities(model: String, apiKey: String): List<String> {
+        if (apiKey.isBlank() || model.isBlank()) return emptyList()
+        val req = Request.Builder()
+            .url("https://api.electronhub.ai/v1/models")
+            .get()
+            .header("Authorization", "Bearer $apiKey")
+            .build()
+        return client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) return@use emptyList()
+            val data = JSONObject(resp.body?.string().orEmpty()).optJSONArray("data")
+                ?: return@use emptyList()
+            for (i in 0 until data.length()) {
+                val m = data.optJSONObject(i) ?: continue
+                if (m.optString("id") != model) continue
+                val eps = m.optJSONArray("endpoints") ?: continue
+                var supportsImages = false
+                for (j in 0 until eps.length()) {
+                    if (eps.optString(j) == "/v1/images/generations") supportsImages = true
+                }
+                if (!supportsImages) return@use emptyList()
+                val qs = m.optJSONArray("qualities") ?: return@use emptyList()
+                return@use (0 until qs.length()).map { String(qs.get(it).toString()) }.filter { it.isNotBlank() }
+            }
+            emptyList()
+        }
+    }
 
     /**
      * 取 ElectronHub 模型 sizes 数组（官方 index.js 调 /v1/models/{model}.sizes 的网络部分）；

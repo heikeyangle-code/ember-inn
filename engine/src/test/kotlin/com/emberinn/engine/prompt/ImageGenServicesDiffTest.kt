@@ -13,7 +13,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.abs
 
 /**
  * 官方行为差分：stable-diffusion 扩展 services 后端服务端 body/URL 构造。
@@ -264,6 +266,14 @@ class ImageGenServicesDiffTest {
                         scale = setting("scale").toDoubleOrNull() ?: 0.0,
                         width = setting("width").toIntOrNull() ?: 0,
                         height = setting("height").toIntOrNull() ?: 0,
+                        // 官方 comfy_placeholders（find,replace 对；replace 已过 substituteParams）
+                        customPlaceholders = args["customPlaceholders"]?.jsonArray?.map { el ->
+                            val o = el.jsonObject
+                            Pair(
+                                o.getValue("find").jsonPrimitive.content,
+                                o.getValue("replace").jsonPrimitive.content,
+                            )
+                        } ?: emptyList(),
                     )
                     val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content
                     assertEquals("case $id", expectedResult, actual)
@@ -274,6 +284,44 @@ class ImageGenServicesDiffTest {
                     val actual = ImageGenRequestEngine.resolveComfySeed(seed, random01)
                     val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content.toLong()
                     assertEquals("case $id", expectedResult, actual)
+                }
+                "novel-params" -> {
+                    fun num(k: String) = (args[k] ?: error("missing $k")).let { el ->
+                        when (el) {
+                            is JsonNull -> null
+                            else -> el.jsonPrimitive.content
+                        }
+                    }
+                    fun bool(k: String) = args.getValue(k).jsonPrimitive.content == "true"
+                    val p = ImageGenRequestEngine.getNovelParams(
+                        steps = num("steps")!!.toInt(),
+                        width = num("width")!!.toInt(),
+                        height = num("height")!!.toInt(),
+                        sampler = num("sampler")!!,
+                        model = num("model")!!,
+                        novelSm = bool("novelSm"),
+                        novelSmDyn = bool("novelSmDyn"),
+                        anlasGuard = bool("anlasGuard"),
+                    )
+                    val exp = expected.jsonObject.getValue("result").jsonObject
+                    assertEquals("case $id steps", exp.getValue("steps").jsonPrimitive.content.toInt(), p.steps)
+                    assertEquals("case $id width", exp.getValue("width").jsonPrimitive.content.toInt(), p.width)
+                    assertEquals("case $id height", exp.getValue("height").jsonPrimitive.content.toInt(), p.height)
+                    assertEquals("case $id sm", exp.getValue("sm").jsonPrimitive.content == "true", p.sm)
+                    assertEquals("case $id smDyn", exp.getValue("sm_dyn").jsonPrimitive.content == "true", p.smDyn)
+                }
+                "skip-cfg-sigma" -> {
+                    val width = args.getValue("width").jsonPrimitive.content.toInt()
+                    val height = args.getValue("height").jsonPrimitive.content.toInt()
+                    val modelEl = args["model"]
+                    val model = if (modelEl == null || modelEl is JsonNull) null else modelEl.jsonPrimitive.content
+                    val actual = ImageGenRequestEngine.calculateSkipCfgAboveSigma(width, height, model)
+                    // JS Math.pow 与 JVM 可差 1 ulp → 数值容差比较（相对 1e-9）
+                    val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content.toDouble()
+                    assertTrue(
+                        "case $id: expected=$expectedResult actual=$actual",
+                        abs(actual - expectedResult) <= Math.max(1e-9, abs(expectedResult) * 1e-9),
+                    )
                 }
                 else -> error("unknown kind: $kind")
             }

@@ -2,6 +2,7 @@ package com.emberinn.app.ui.settings
 
 import android.content.Context
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -140,6 +141,97 @@ object ServicesPrefs {
             .apply()
     }
 
+    // ---- 官方 defaultSettings 补齐（stable-diffusion/index.js 默认值逐项核对） ----
+
+    /** 官方 sd_snap（L280 默认 false）：自动调整的分辨率吸附到最近已知分辨率。 */
+    fun imageSnap(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_snap", false)
+
+    /** 官方 sd_minimal_prompt_processing（L283 默认 false）：LLM 生成 prompt 走最小后处理。 */
+    fun imageMinimalPromptProcessing(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_minimal_prompt_processing", false)
+
+    /** 官方 novel_anlas_guard（L321 默认 false）：自动调参避免消耗 Anlas（免费档）。 */
+    fun novelAnlasGuard(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_novel_anlas_guard", false)
+
+    /** 官方 novel_sm（L322 默认 false）：SMEA 采样变体；ddim / nai-diffusion-4-full 强制关。 */
+    fun novelSm(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_novel_sm", false)
+
+    /** 官方 novel_sm_dyn（L323 默认 false）：SMEA DYN 变体（依赖 SMEA 开启）。 */
+    fun novelSmDyn(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_novel_sm_dyn", false)
+
+    /** 官方 novel_decrisper（L324 默认 false）→ NovelAI dynamic_thresholding。 */
+    fun novelDecrisper(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_novel_decrisper", false)
+
+    /** 官方 novel_variety_boost（L325 默认 false）→ skip_cfg_above_sigma = calculateSkipCfgAboveSigma。 */
+    fun novelVarietyBoost(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_novel_variety_boost", false)
+
+    /** 官方 horde_karras（L273-274 默认 true）。直连 Horde 不发该字段（官方怪点）；extras 路径使用。 */
+    fun imageHordeKarras(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_horde_karras", true)
+
+    /** 官方 horde_sanitize（L274 默认 true）：Horde 侧 prompt 清洗开关。 */
+    fun imageHordeSanitize(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_horde_sanitize", true)
+
+    /**
+     * 官方 horde_nsfw（L272 默认 false）。注意官方服务端笔误读 request.body.nfsw（undefined），
+     * 直连 Horde 从不发送 nsfw——开关存在但直连路径无效果，为保 1:1 App 直连同样省略。
+     */
+    fun imageHordeNsfw(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_horde_nsfw", false)
+
+    /** 官方 openai_style（L328 默认 'vivid'）：dall-e-3 图像风格。 */
+    fun openaiStyle(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_openai_style", "vivid") ?: "vivid"
+
+    /** 官方 openai_quality（L329 默认 'standard'）：dall-e-3/cogview/glm 质量。 */
+    fun openaiQuality(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_openai_quality", "standard") ?: "standard"
+
+    /** 官方 openai_quality_gpt（L330 默认 'auto'）：gpt-image-* 质量。 */
+    fun openaiQualityGpt(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_openai_quality_gpt", "auto") ?: "auto"
+
+    /** 官方 stability_style_preset（L354 默认 'anime'），客户端恒发送。 */
+    fun stabilityStylePreset(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_stability_style_preset", "anime") ?: "anime"
+
+    /** 官方 pollinations_enhance（L345 默认 false）：LLM 提示词增强。 */
+    fun pollinationsEnhance(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_pollinations_enhance", false)
+
+    /** 官方 bfl_upsampling（L357 默认 false）：BFL Prompt Upsampling。 */
+    fun bflUpsampling(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_bfl_upsampling", false)
+
+    /** 官方 google_enhance（L361 默认 true）：Google 生图提示词增强（服务端经 LLM 润色）。 */
+    fun googleEnhance(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_google_enhance", true)
+
+    /** 官方 google_api（UI 无值时客户端兜底 'makersuite'，index.js L4616）。 */
+    fun googleApi(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_google_api", "") ?: ""
+
+    /** 官方 huggingface_model_id（默认 ''）：HF Inference 模型 id，独立于通用 model 字段。 */
+    fun huggingfaceModelId(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_huggingface_model_id", "") ?: ""
+
+    /** electronhub_quality：官方默认 undefined（省略）；UI 选择后为字符串。空串 = 未设置。 */
+    fun electronhubQuality(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_electronhub_quality", "") ?: ""
+
+    fun saveImageString(context: Context, key: String, value: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString(key, value)
+            .apply()
+    }
+
     /** 角色提示词前缀（官方 extension_settings.sd.character_prompts，按角色 id 存）。 */
     fun imageCharaPrompt(context: Context, characterId: String?): String =
         if (characterId.isNullOrBlank()) "" else imageCharaPromptMap(context)[characterId] ?: ""
@@ -227,6 +319,43 @@ object ServicesPrefs {
     fun saveComfyType(context: Context, type: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("sd_comfy_type", type)
+            .apply()
+    }
+
+    /**
+     * 官方 sd_comfy_placeholders（index.js L4248-L4250 / L4818-L4835）：自定义占位符
+     * [{find, replace}] 数组，workflow 中 `"%find%"` → JSON.stringify(substituteParams(replace))。
+     * JSON 数组存档；replace 的宏替换（{{user}} 等）在执行层做。
+     */
+    fun comfyPlaceholders(context: Context): List<Pair<String, String>> {
+        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_comfy_placeholders", "") ?: ""
+        if (raw.isBlank()) return emptyList()
+        return runCatching {
+            val arr = kotlinx.serialization.json.Json.parseToJsonElement(raw).jsonArray
+            arr.mapNotNull { el ->
+                val o = el.jsonObject
+                val f = o["find"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                val r = o["replace"]?.jsonPrimitive?.contentOrNull ?: ""
+                Pair(f, r)
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveComfyPlaceholders(context: Context, list: List<Pair<String, String>>) {
+        val json = buildString {
+            append("[")
+            list.forEachIndexed { i, (f, r) ->
+                if (i > 0) append(",")
+                append("{\"find\":")
+                append(kotlinx.serialization.json.JsonPrimitive(f))
+                append(",\"replace\":")
+                append(kotlinx.serialization.json.JsonPrimitive(r))
+                append("}")
+            }
+            append("]")
+        }
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("sd_comfy_placeholders", json)
             .apply()
     }
 
