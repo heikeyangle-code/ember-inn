@@ -308,7 +308,6 @@ class AzureCloudBackend : TtsBackend {
                     .post(ssml.toRequestBody("application/ssml+xml".toMediaType()))
                     .build()
                 // jsBody 仅用于差分验证；Azure 直连 body=SSML（服务端拼装语义）
-                @Suppress("unused") val _verify = jsBody
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) null else resp.body?.bytes()
                 }
@@ -555,19 +554,27 @@ class VolcengineCloudBackend : TtsBackend {
                     .build()
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) return@use null
-                    // NDJSON 流：逐行解析 {data, code, message}，base64 音频块按序拼接
+                    // NDJSON 流：逐行解析 {data, code, message}，base64 音频块按序拼接；
+                    // 官方任一行 code 非法即抛错失败（volcengine.js generateTts）
                     val audio = mutableListOf<ByteArray>()
                     val buf = java.io.ByteArrayOutputStream()
-                    resp.body?.byteStream()?.bufferedReader(Charsets.UTF_8)?.forEachLine { line ->
-                        if (line.isBlank()) return@forEachLine
-                        val obj = runCatching { org.json.JSONObject(line) }.getOrNull() ?: return@forEachLine
+                    val reader = resp.body?.byteStream()?.bufferedReader(Charsets.UTF_8)
+                    var failed = false
+                    while (true) {
+                        val line = reader?.readLine() ?: break
+                        if (line.isBlank()) continue
+                        val obj = runCatching { org.json.JSONObject(line) }.getOrNull() ?: continue
                         val code = obj.optInt("code", 0)
-                        if (code != 0 && code != 20000000) return@runCatching null
+                        if (code != 0 && code != 20000000) {
+                            failed = true
+                            break
+                        }
                         val data = obj.optString("data")
                         if (data.isNotBlank()) {
                             audio.add(Base64.decode(data, Base64.DEFAULT))
                         }
                     }
+                    if (failed) return@use null
                     for (chunk in audio) buf.write(chunk)
                     val out = buf.toByteArray()
                     if (out.isEmpty()) null else out
