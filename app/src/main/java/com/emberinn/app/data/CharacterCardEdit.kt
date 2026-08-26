@@ -287,6 +287,34 @@ object CharacterCardEdit {
             ?.get("world")?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
     }.getOrDefault(null)
 
+    /** 官方 data.extensions.sd_character_prompt：{positive, negative}（SD 扩展 Shareable 共享）。 */
+    fun readSdCharacterPrompt(raw: String): Pair<String, String>? = runCatching {
+        val o = dataLayer(parseCached(raw))["extensions"]?.jsonObject
+            ?.get("sd_character_prompt") as? JsonObject ?: return@runCatching null
+        val pos = (o["positive"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+        val neg = (o["negative"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+        pos to neg
+    }.getOrDefault(null)
+
+    /** 保存/移除角色卡的 SD 提示词共享（官方 writePromptFields/writeExtensionField(null)：
+     *  勾选恒写两字段（空串也写），取消勾选整键删除）。 */
+    fun applySdCharacterPrompt(raw: String, positive: String, negative: String): String = updateData(raw) { data ->
+        val m = data.toMutableMap()
+        val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (positive.isBlank() && negative.isBlank()) {
+            ext.remove("sd_character_prompt")
+        } else {
+            ext["sd_character_prompt"] = JsonObject(
+                mapOf(
+                    "positive" to JsonPrimitive(positive),
+                    "negative" to JsonPrimitive(negative),
+                ),
+            )
+        }
+        m["extensions"] = JsonObject(ext)
+        JsonObject(m)
+    }
+
     /** 保存角色关联的外置世界（官方 data.extensions.world）。 */
     fun applyWorldLink(raw: String, worldName: String): String = updateData(raw) { data ->
         val m = data.toMutableMap()

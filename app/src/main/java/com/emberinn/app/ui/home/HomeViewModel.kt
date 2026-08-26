@@ -336,6 +336,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         saveJson(record, root)
     }
 
+    /** 官方 data.extensions.sd_character_prompt：读取 SD 扩展共享的 {positive, negative}。 */
+    fun readSdCharacterPromptShared(record: CharacterRecord): Pair<String, String>? =
+        CharacterCardEdit.readSdCharacterPrompt(record.rawJson)
+
+    /** 官方 Shareable 勾选：写入/移除角色卡的 sd_character_prompt（全空 = 移除）。 */
+    fun saveSdCharacterPromptShared(record: CharacterRecord, positive: String, negative: String) {
+        val root = json.parseToJsonElement(
+            CharacterCardEdit.applySdCharacterPrompt(record.rawJson, positive, negative),
+        ).jsonObject
+        saveJson(record, root)
+    }
+
     /** 读取该卡正则脚本（官方 data.extensions.regex_scripts）。 */
     fun readRegexScripts(record: CharacterRecord): List<CharacterRegexScript> =
         CharacterCardEdit.readRegexScripts(record.rawJson)

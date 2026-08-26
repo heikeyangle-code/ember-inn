@@ -135,8 +135,17 @@ fun CharacterDetailScreen(
     // 官方 sd_character_prompt_block（settings.html L609-L625）：角色专属正/负提示词前缀，
     // 存 extension_settings.sd.character_prompts / character_negative_prompts（App 按角色 id 存 prefs）；
     // 群聊不使用（官方 "Won't be used in groups."）
-    var charaImagePrompt by remember(record.id) { mutableStateOf(ServicesPrefs.imageCharaPrompt(context, record.id)) }
-    var charaImageNegative by remember(record.id) { mutableStateOf(ServicesPrefs.imageCharaNegativePrompt(context, record.id)) }
+    // 官方 onChatChanged（index.js L883-L898）：卡上有共享数据且本地为空时导入
+    val sharedImagePrompt = remember(record.id) { vm.readSdCharacterPromptShared(record) }
+    var charaShareable by remember(record.id) { mutableStateOf(sharedImagePrompt != null) }
+    var charaImagePrompt by remember(record.id) {
+        val local = ServicesPrefs.imageCharaPrompt(context, record.id)
+        mutableStateOf(if (local.isBlank()) sharedImagePrompt?.first.orEmpty() else local)
+    }
+    var charaImageNegative by remember(record.id) {
+        val local = ServicesPrefs.imageCharaNegativePrompt(context, record.id)
+        mutableStateOf(if (local.isBlank()) sharedImagePrompt?.second.orEmpty() else local)
+    }
     var dirty by remember { mutableStateOf(false) }
 
     var editingKey by remember { mutableStateOf<String?>(null) }
@@ -727,6 +736,29 @@ fun CharacterDetailScreen(
                             color = EmberTheme.colors.inkMute,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                         )
+                        // 官方 sd_character_prompt_share（index.js onCharacterPromptShareInput）：
+                        // 勾选把 {positive, negative} 写进角色卡 data.extensions.sd_character_prompt
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("共享到角色卡", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
+                                Text(
+                                    "勾选后随角色卡数据保存（data.extensions.sd_character_prompt），导入时自动带入。",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = EmberTheme.colors.inkMute,
+                                )
+                            }
+                            EmberSwitch(
+                                checked = charaShareable,
+                                onChange = { on ->
+                                    charaShareable = on
+                                    if (on) {
+                                        vm.saveSdCharacterPromptShared(record, charaImagePrompt, charaImageNegative)
+                                    } else {
+                                        vm.saveSdCharacterPromptShared(record, "", "")
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
 
