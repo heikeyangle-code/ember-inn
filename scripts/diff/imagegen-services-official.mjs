@@ -942,5 +942,49 @@ add('skip-cfg-sigma-null-model-defaults-19', 'skip-cfg-sigma',
     { width: 512, height: 512, model: null },
     { result: calculateSkipCfgAboveSigma(512, 512, null) });
 
+// ============ DrawThings body（generateDrawthingsImage index.js L3918-L3944） ============
+// url/auth 两键由服务端 spread 后 delete，差分只覆盖设置键；seed>=0 原样否则 undefined（stringify 省略）
+function drawthingsBody(prompt, negativePrompt, sampler, steps, scale, width, height,
+                        restoreFaces, enableHr, denoisingStrength, clipSkip, hrScale, seed) {
+    return JSON.stringify({
+        prompt: prompt,
+        negative_prompt: negativePrompt,
+        sampler_name: sampler,
+        steps: steps,
+        cfg_scale: scale,
+        width: width,
+        height: height,
+        restore_faces: !!restoreFaces,
+        enable_hr: !!enableHr,
+        denoising_strength: denoisingStrength,
+        clip_skip: clipSkip,
+        upscaler_scale: hrScale,
+        seed: seed >= 0 ? seed : undefined,
+    });
+}
+const DRAWTHINGS_DEFAULTS = ['DDIM', 20, 7, 512, 512, false, false, 0.7, 1, 1.0];
+function drawthingsArgs(prompt, negativePrompt, sampler, steps, scale, width, height,
+                        restoreFaces, enableHr, denoisingStrength, clipSkip, hrScale, seed) {
+    return {
+        prompt, negativePrompt, sampler, steps, scale, width, height,
+        restoreFaces, enableHr, denoisingStrength, clipSkip, hrScale, seed,
+    };
+}
+add('drawthings-defaults-seed-random', 'drawthings-body',
+    // 官方默认值 + seed=-1 → 键省略
+    (() => { const a = [ 'a cat', 'lowres', ...DRAWTHINGS_DEFAULTS, -1 ];
+        return drawthingsArgs(...a); })(),
+    { result: drawthingsBody('a cat', 'lowres', ...DRAWTHINGS_DEFAULTS, -1) });
+add('drawthings-seed-fixed-hr-scale', 'drawthings-body',
+    // seed 固定原样、hr_scale=1.5 → upscaler_scale=1.5、restore/enable_hr 双开
+    drawthingsArgs('portrait, detailed', 'blurry', 'Euler a', 28, 6.5, 768, 512,
+        true, true, 0.55, 2, 1.5, 123456789),
+    { result: drawthingsBody('portrait, detailed', 'blurry', 'Euler a', 28, 6.5, 768, 512,
+        true, true, 0.55, 2, 1.5, 123456789) });
+add('drawthings-denoising-integer-one', 'drawthings-body',
+    // denoising_strength=1.0 → JSON.stringify 输出 "1"（整数化数字语义）
+    drawthingsArgs('x', '', 'DDIM', 20, 7, 512, 512, false, false, 1.0, 1, 1.0, 7),
+    { result: drawthingsBody('x', '', 'DDIM', 20, 7, 512, 512, false, false, 1.0, 1, 1.0, 7) });
+
 writeFileSync(outFile, JSON.stringify({ cases }, null, 2) + '\n');
 console.log(`imagegen-services fixtures: ${cases.length} cases -> ${outFile}`);

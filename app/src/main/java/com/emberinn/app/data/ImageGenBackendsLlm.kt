@@ -32,8 +32,7 @@ import org.json.JSONObject
  *   WorkersAI（客户端 body，服务端翻译为 Cloudflare form 不在差分范围）、ComfyRunPod
  *   （replaceComfyWorkflow 纯函数替换，异步 /run + /status 轮询属接线）、
  *   Extras（引擎 extrasPayload + 接线）；
- * - 🟡 DrawThings：macOS only，登记不实现（官方 generateDrawthingsImage 仅 Apple 可用，
- *   对应 /api/sd/drawthings/generate，App 返回 null）。
+ * - DrawThings 已迁至 ImageGenClient 直连（/sdapi/v1/txt2img + Basic auth，drawthingsPayload 差分 3 例）。
  *
  * 共用文件级 OkHttpClient（connect 15s / read 120s，与 ImageGenClient.kt 一致）；
  * generate 统一失败 runCatching → null。
@@ -49,7 +48,7 @@ object ImageGenBackendsLlm {
 
     /**
      * 按 source 分派（对照官方 stable-diffusion/settings.html sd_source 选项）。
-     * drawthings 返回 null，走登记。ComfyRunPod 失败：endpoint_id / workflow / apiKey 任一缺失。
+     * drawthings 在 ImageGenClient 直连处理。ComfyRunPod 失败：endpoint_id / workflow / apiKey 任一缺失。
      */
     suspend fun generate(context: Context, source: String, prompt: String, negativePrompt: String): String? =
         withContext(Dispatchers.IO) {
@@ -61,7 +60,6 @@ object ImageGenBackendsLlm {
                     "workersai" -> generateWorkersAIImage(context, prompt, negativePrompt)
                     "falai" -> generateFalaiImage(context, prompt)
                     "extras" -> generateExtrasImage(context, prompt, negativePrompt)
-                    "drawthings" -> null
                     "comfy_runpod" -> generateComfyRunPodImage(context, prompt, negativePrompt)
                     else -> null
                 }
@@ -368,7 +366,8 @@ object ImageGenBackendsLlm {
     ): String? = withContext(Dispatchers.IO) {
         runCatching {
             val apiKey = ServicesPrefs.imageApiKey(context)
-            val endpointId = ServicesPrefs.imageUrl(context).trimEnd('/').substringAfterLast('/')
+            // 官方 sd_comfy_runpod_url（defaultSettings L342，eg https://api.runpod.ai/v2/<endpoint id>）
+            val endpointId = ServicesPrefs.comfyRunpodUrl(context).trimEnd('/').substringAfterLast('/')
             val workflow = ComfyWorkflowStore(context).activeWorkflowJson()
             if (apiKey.isBlank() || endpointId.isBlank() || workflow.isBlank()) return@runCatching null
             val replaced = ImageGenRequestEngine.replaceComfyWorkflow(

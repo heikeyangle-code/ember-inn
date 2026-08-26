@@ -285,6 +285,26 @@ class ImageGenServicesDiffTest {
                     val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content.toLong()
                     assertEquals("case $id", expectedResult, actual)
                 }
+                "drawthings-body" -> {
+                    fun s(k: String) = args.getValue(k).jsonPrimitive.content
+                    // clipSkip null 模拟官方 undefined（JSON 省略键）；restore/enable 官方 !! 布尔化
+                    val setting = ImageGenRequestEngine.ImageGenSettings(
+                        sampler = s("sampler"),
+                        steps = s("steps").toInt(),
+                        scale = s("scale").toDouble(),
+                        width = s("width").toInt(),
+                        height = s("height").toInt(),
+                        restoreFaces = s("restoreFaces") == "true",
+                        enableHr = s("enableHr") == "true",
+                        denoisingStrength = s("denoisingStrength").toDouble(),
+                        clipSkip = s("clipSkip").takeIf { it != "null" }?.toDouble()?.toInt(),
+                        hrScale = s("hrScale").toDouble(),
+                        seed = s("seed").toLong(),
+                    )
+                    val actual = ImageGenRequestEngine.drawthingsPayload(setting, s("prompt"), s("negativePrompt"))
+                    val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content
+                    assertEquals("case $id", expectedResult, actual.toString())
+                }
                 "novel-params" -> {
                     fun num(k: String) = (args[k] ?: error("missing $k")).let { el ->
                         when (el) {
@@ -303,7 +323,8 @@ class ImageGenServicesDiffTest {
                         novelSmDyn = bool("novelSmDyn"),
                         anlasGuard = bool("anlasGuard"),
                     )
-                    val exp = expected.jsonObject.getValue("result").jsonObject
+                    // novel-params 的 expected 即结果对象本体（无 result 包裹键）
+                    val exp = expected.jsonObject
                     assertEquals("case $id steps", exp.getValue("steps").jsonPrimitive.content.toInt(), p.steps)
                     assertEquals("case $id width", exp.getValue("width").jsonPrimitive.content.toInt(), p.width)
                     assertEquals("case $id height", exp.getValue("height").jsonPrimitive.content.toInt(), p.height)

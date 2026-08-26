@@ -467,7 +467,7 @@ object ImageGenBackendsCloud {
                 }
                 if (!supportsImages) return@use emptyList()
                 val qs = m.optJSONArray("qualities") ?: return@use emptyList()
-                return@use (0 until qs.length()).map { String(qs.get(it).toString()) }.filter { it.isNotBlank() }
+                return@use (0 until qs.length()).map { qs.optString(it) }.filter { it.isNotBlank() }
             }
             emptyList()
         }

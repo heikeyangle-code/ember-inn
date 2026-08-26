@@ -8,6 +8,7 @@ import android.widget.Toast
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.data.ComfyWorkflowStore
 import com.emberinn.app.data.ImageGenBackendsCloud
+import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.PromptTemplateStore
 import com.emberinn.app.data.StyleStore
 import com.emberinn.engine.prompt.ImageGenPromptEngine
@@ -41,8 +42,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -294,7 +297,16 @@ private fun TranslateCard() {
 private fun ImageCard() {
     val context = LocalContext.current
     var source by rememberSaveable { mutableStateOf(ServicesPrefs.imageSource(context)) }
-    var url by rememberSaveable { mutableStateOf(ServicesPrefs.imageUrl(context)) }
+    // 官方逐源 URL/auth（sd_auto_url+auth / sd_sdcpp_url / sd_vlad_url+auth / sd_drawthings_url+auth / comfy 两键）
+    var autoUrl by rememberSaveable { mutableStateOf(ServicesPrefs.autoUrl(context)) }
+    var autoAuth by rememberSaveable { mutableStateOf(ServicesPrefs.autoAuth(context)) }
+    var sdcppUrl by rememberSaveable { mutableStateOf(ServicesPrefs.sdcppUrl(context)) }
+    var vladUrl by rememberSaveable { mutableStateOf(ServicesPrefs.vladUrl(context)) }
+    var vladAuth by rememberSaveable { mutableStateOf(ServicesPrefs.vladAuth(context)) }
+    var drawthingsUrl by rememberSaveable { mutableStateOf(ServicesPrefs.drawthingsUrl(context)) }
+    var drawthingsAuth by rememberSaveable { mutableStateOf(ServicesPrefs.drawthingsAuth(context)) }
+    var comfyUrl by rememberSaveable { mutableStateOf(ServicesPrefs.comfyUrl(context)) }
+    var comfyRunpodUrl by rememberSaveable { mutableStateOf(ServicesPrefs.comfyRunpodUrl(context)) }
     var model by rememberSaveable { mutableStateOf(ServicesPrefs.imageModel(context)) }
     var steps by rememberSaveable { mutableStateOf(ServicesPrefs.imageSteps(context)) }
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.imageApiKey(context)) }
@@ -340,7 +352,9 @@ private fun ImageCard() {
     var ehQuality by rememberSaveable { mutableStateOf(ServicesPrefs.electronhubQuality(context)) }
     var bflUpsampling by rememberSaveable { mutableStateOf(ServicesPrefs.bflUpsampling(context)) }
     var hfModelId by rememberSaveable { mutableStateOf(ServicesPrefs.huggingfaceModelId(context)) }
-    fun save() = ServicesPrefs.saveImage(context, source, url, model, steps)
+    fun save() = ServicesPrefs.saveImage(context, source, model, steps)
+    /** 逐源 URL/auth 落盘（官方 sd_<source>_url / sd_<source>_auth 键名）。 */
+    fun saveSd(key: String, v: String) = ServicesPrefs.saveImageString(context, key, v)
     fun saveAdvanced() = ServicesPrefs.saveImageAdvanced(
         context,
         promptPrefix,
@@ -379,8 +393,56 @@ private fun ImageCard() {
                 label = "API Key",
             )
         }
-        if (source == "auto" || source == "sdcpp" || source == "comfy" || source == "vlad" || source == "drawthings") {
-            TextFieldRow("接口地址", url) { url = it; save() }
+        // 官方逐源 URL/auth 字段 + 验证按钮（settings.html sd_auto/sdcpp/drawthings/vlad/comfy/
+        // comfy_runpod_validate；服务端各 ping 路由语义见 ImageGenClient.pingSource）
+        val scope = rememberCoroutineScope()
+        fun validateButton() = TextButton(onClick = {
+            scope.launch {
+                val err = ImageGenClient().pingSource(context, source)
+                Toast.makeText(
+                    context,
+                    if (err == null) "已连接" else "无法验证：$err",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }) {
+            Text(
+                when {
+                    source == "comfy" && comfyType == "runpod_serverless" -> "验证 ComfyUI RunPod"
+                    source == "comfy" -> "验证 ComfyUI"
+                    else -> "测试连接"
+                },
+            )
+        }
+        when (source) {
+            "auto" -> {
+                TextFieldRow("接口地址（sd_auto_url）", autoUrl) { autoUrl = it; saveSd("sd_auto_url", it) }
+                TextFieldRow("认证（sd_auto_auth，user:pass）", autoAuth) { autoAuth = it; saveSd("sd_auto_auth", it) }
+                validateButton()
+            }
+            "sdcpp" -> {
+                TextFieldRow("接口地址（sd_sdcpp_url）", sdcppUrl) { sdcppUrl = it; saveSd("sd_sdcpp_url", it) }
+                validateButton()
+            }
+            "vlad" -> {
+                TextFieldRow("接口地址（sd_vlad_url）", vladUrl) { vladUrl = it; saveSd("sd_vlad_url", it) }
+                TextFieldRow("认证（sd_vlad_auth，user:pass）", vladAuth) { vladAuth = it; saveSd("sd_vlad_auth", it) }
+                validateButton()
+            }
+            "drawthings" -> {
+                TextFieldRow("接口地址（sd_drawthings_url）", drawthingsUrl) { drawthingsUrl = it; saveSd("sd_drawthings_url", it) }
+                TextFieldRow("认证（sd_drawthings_auth，user:pass）", drawthingsAuth) { drawthingsAuth = it; saveSd("sd_drawthings_auth", it) }
+                validateButton()
+            }
+            "comfy" -> {
+                // 官方 data-sd-comfy-type 分区：standard 显示 comfy_url，runpod 显示 comfy_runpod_url
+                if (comfyType == "runpod_serverless") {
+                    TextFieldRow("RunPod 地址（sd_comfy_runpod_url）", comfyRunpodUrl) { comfyRunpodUrl = it; saveSd("sd_comfy_runpod_url", it) }
+                } else {
+                    TextFieldRow("接口地址（sd_comfy_url）", comfyUrl) { comfyUrl = it; saveSd("sd_comfy_url", it) }
+                }
+                validateButton()
+            }
         }
         if (source == "novel" || source == "sdcpp" || source == "huggingface" || source == "comfy" ||
             source == "zai" || source == "openrouter" || source == "workersai" || source == "google" ||

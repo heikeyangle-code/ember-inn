@@ -50,6 +50,50 @@ object ServicesPrefs {
     fun imageUrl(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_url", "") ?: ""
 
+    /**
+     * 官方逐源 URL/auth 字段（stable-diffusion/index.js defaultSettings L288-298/L339-342）：
+     * auto_url='http://localhost:7860' + auto_auth、sdcpp_url='http://127.0.0.1:1234'（无 auth）、
+     * vlad_url='http://localhost:7860' + vlad_auth、drawthings_url='http://localhost:7860' + drawthings_auth、
+     * comfy_url='http://127.0.0.1:8188'、comfy_runpod_url=''。
+     * URL 键未写过时回退旧单字段 sd_url（App 拆分前只有一处连接设置），再退官方默认。
+     */
+    private fun sdSourceField(context: Context, key: String, def: String, legacyUrl: Boolean = false): String {
+        val p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        if (p.contains(key)) return p.getString(key, def) ?: def
+        if (legacyUrl) {
+            val legacy = p.getString("sd_url", "") ?: ""
+            if (legacy.isNotEmpty()) return legacy
+        }
+        return def
+    }
+
+    /** 官方 auto_url（L288）。 */
+    fun autoUrl(context: Context): String = sdSourceField(context, "sd_auto_url", "http://localhost:7860", legacyUrl = true)
+
+    /** 官方 auto_auth：服务端 getBasicAuthHeader 恒发 Basic 头（空串也发）。 */
+    fun autoAuth(context: Context): String = sdSourceField(context, "sd_auto_auth", "")
+
+    /** 官方 sdcpp_url（L292）；sdcpp 服务端不发 auth。 */
+    fun sdcppUrl(context: Context): String = sdSourceField(context, "sd_sdcpp_url", "http://127.0.0.1:1234", legacyUrl = true)
+
+    /** 官方 vlad_url（L294）。 */
+    fun vladUrl(context: Context): String = sdSourceField(context, "sd_vlad_url", "http://localhost:7860", legacyUrl = true)
+
+    /** 官方 vlad_auth。 */
+    fun vladAuth(context: Context): String = sdSourceField(context, "sd_vlad_auth", "")
+
+    /** 官方 drawthings_url（L297）。 */
+    fun drawthingsUrl(context: Context): String = sdSourceField(context, "sd_drawthings_url", "http://localhost:7860", legacyUrl = true)
+
+    /** 官方 drawthings_auth。 */
+    fun drawthingsAuth(context: Context): String = sdSourceField(context, "sd_drawthings_auth", "")
+
+    /** 官方 comfy_url（L339）。 */
+    fun comfyUrl(context: Context): String = sdSourceField(context, "sd_comfy_url", "http://127.0.0.1:8188", legacyUrl = true)
+
+    /** 官方 comfy_runpod_url（L342），默认空；RunPod 走 Bearer imageApiKey。 */
+    fun comfyRunpodUrl(context: Context): String = sdSourceField(context, "sd_comfy_runpod_url", "", legacyUrl = true)
+
     fun imageModel(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_model", "") ?: ""
 
@@ -440,10 +484,9 @@ object ServicesPrefs {
             .apply()
     }
 
-    fun saveImage(context: Context, source: String, url: String, model: String, steps: Int) {
+    fun saveImage(context: Context, source: String, model: String, steps: Int) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("sd_source", source)
-            .putString("sd_url", url)
             .putString("sd_model", model)
             .putInt("sd_steps", steps)
             .apply()

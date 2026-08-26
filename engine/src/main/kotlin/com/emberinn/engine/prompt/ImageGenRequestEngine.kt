@@ -116,6 +116,28 @@ object ImageGenRequestEngine {
         }
     }
 
+    /**
+     * 官方 generateDrawthingsImage 客户端 body（index.js L3918-L3944 1:1；url/auth 两键由调用方附加，
+     * 模拟服务端 spread 后 delete url/auth 再转发）。upscaler_scale = hr_scale；seed<0 → undefined
+     * （JSON 省略）；无 scheduler/hr 细分/override_settings——官方 TODO 注明 advanced API 未接。
+     */
+    fun drawthingsPayload(settings: ImageGenSettings, prompt: String, negativePrompt: String): JsonObject =
+        buildJsonObject {
+            put("prompt", JsonPrimitive(prompt))
+            put("negative_prompt", JsonPrimitive(negativePrompt))
+            put("sampler_name", JsonPrimitive(settings.sampler))
+            put("steps", JsonPrimitive(settings.steps))
+            put("cfg_scale", num(settings.scale))
+            put("width", JsonPrimitive(settings.width))
+            put("height", JsonPrimitive(settings.height))
+            put("restore_faces", JsonPrimitive(settings.restoreFaces))
+            put("enable_hr", JsonPrimitive(settings.enableHr))
+            put("denoising_strength", num(settings.denoisingStrength))
+            settings.clipSkip?.let { put("clip_skip", JsonPrimitive(it)) }
+            put("upscaler_scale", num(settings.hrScale))
+            if (settings.seed >= 0) put("seed", JsonPrimitive(settings.seed))
+        }
+
     // ---------- services 后端（src/endpoints/stable-diffusion.js 各 <backend>.post('/generate')） ----------
     // 差分：scripts/diff/imagegen-services-official.mjs（12 例：together 3 / pollinations 6 / chutes 3）。
     // 边界（不差分，登记）：stability multipart form-data、aimlapi/electronhub/nanogpt/xai body 简单另开、

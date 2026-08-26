@@ -21,9 +21,10 @@ import java.util.concurrent.TimeUnit
 
 /**
  * 图像生成执行层：对齐官方 stable-diffusion 扩展。
- * 已实现：AUTOMATIC1111（auto）、SDCPP（sdcpp，同 /sdapi/v1/txt2img）、NovelAI（zip→png）、
- * OpenAI gpt-image、Hugging Face Inference（原始字节）、Stable Horde（异步轮询）、
- * ComfyUI（workflow JSON + /prompt + /history + /view）。DrawThings 仅 macOS，Android 不适用已移除。
+ * 已实现：AUTOMATIC1111（auto）、SD.Next（vlad）、stable-diffusion.cpp、DrawThings（三者同
+ * /sdapi/v1/txt2img，逐源 URL/auth 见 [ServicesPrefs] sd_auto/sdcpp/vlad/drawthings_* 键）、
+ * NovelAI（zip→png）、OpenAI gpt-image、Hugging Face Inference（原始字节）、Stable Horde（异步轮询）、
+ * ComfyUI（workflow JSON + /prompt + /history + /view）。另含逐源「验证」[pingSource]。
  */
 class ImageGenClient {
 
@@ -33,6 +34,58 @@ class ImageGenClient {
         .build()
 
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
+
+    /**
+     * 官方逐源「验证」按钮（settings.html sd_auto/sdcpp/drawthings/vlad/comfy/comfy_runpod_validate
+     * + 服务端 stable-diffusion.js 各 ping 路由 1:1）。返回 null=连通，否则失败说明。
+     * - auto/vlad：GET {url→整路径替换}/sdapi/v1/options + Basic auth（L31-L49）
+     * - sdcpp：OPTIONS urlJoin(url,'/v1/images/generations')，无 auth（L833-L846）
+     * - drawthings：HEAD {url→整路径 '/'}（L918-L932）
+     * - comfy：GET urlJoin(url,'/system_stats')（L387-L400）
+     * - comfy_runpod：GET urlJoin(url,'/health') + Bearer key；workers.ready<=0 仅告警仍算通（L636-L661）
+     */
+    suspend fun pingSource(context: Context, source: String): String? = withContext(Dispatchers.IO) {
+        val raw = when (source) {
+            "sdcpp" -> ServicesPrefs.sdcppUrl(context)
+            "vlad" -> ServicesPrefs.vladUrl(context)
+            "drawthings" -> ServicesPrefs.drawthingsUrl(context)
+            "comfy" ->
+                if (ServicesPrefs.comfyType(context) == "runpod_serverless") ServicesPrefs.comfyRunpodUrl(context)
+                else ServicesPrefs.comfyUrl(context)
+            else -> ServicesPrefs.autoUrl(context)
+        }
+        if (raw.isBlank()) return@withContext "URL is not set."
+        runCatching {
+            val base = java.net.URL(raw)
+            fun joined(suffix: String) = java.net.URL(base.protocol, base.host, base.port, base.path.trimEnd('/') + suffix).toString()
+            val request = when (source) {
+                // new URL(url); url.pathname='/...' —— 整段路径替换（丢弃原 path）
+                "auto", "vlad" -> {
+                    val auth = if (source == "vlad") ServicesPrefs.vladAuth(context) else ServicesPrefs.autoAuth(context)
+                    Request.Builder()
+                        .url(java.net.URL(base.protocol, base.host, base.port, "/sdapi/v1/options").toString())
+                        .header("Authorization", basicAuthHeader(auth))
+                        .get()
+                        .build()
+                }
+                "drawthings" -> Request.Builder()
+                    .url(java.net.URL(base.protocol, base.host, base.port, "/").toString())
+                    .head()
+                    .build()
+                "sdcpp" -> Request.Builder().url(joined("/v1/images/generations")).method("OPTIONS", null).build()
+                "comfy" -> Request.Builder().url(joined("/system_stats")).get().build()
+                else -> { // comfy_runpod：Bearer key 缺失 → 官方 400
+                    val key = ServicesPrefs.imageApiKey(context)
+                    if (key.isBlank()) return@withContext "RunPod key not found."
+                    Request.Builder().url(joined("/health")).header("Authorization", "Bearer $key").get().build()
+                }
+            }
+            client.newCall(request).execute().use { resp ->
+                if (!resp.isSuccessful) return@withContext "HTTP ${resp.code}"
+            }
+            null
+        }.getOrElse { it.message ?: "连接失败" }
+    }
 
     /** 返回生成的图片本地路径（失败返回 null）。 */
     suspend fun generate(
@@ -44,7 +97,16 @@ class ImageGenClient {
     ): String? = withContext(Dispatchers.IO) {
         if (prompt.isBlank()) return@withContext null
         val source = ServicesPrefs.imageSource(context)
-        val url = ServicesPrefs.imageUrl(context)
+        // 官方逐源 URL（getSdRequestBody index.js L438-L447 + comfy L4314/L4333）：
+        // auto/auto_auth、vlad/vlad_auth、drawthings/drawthings_auth 各自独立；sdcpp 无 auth
+        val url = when (source) {
+            "sdcpp" -> ServicesPrefs.sdcppUrl(context)
+            "vlad" -> ServicesPrefs.vladUrl(context)
+            "comfy" ->
+                if (ServicesPrefs.comfyType(context) == "runpod_serverless") ServicesPrefs.comfyRunpodUrl(context)
+                else ServicesPrefs.comfyUrl(context)
+            else -> ServicesPrefs.autoUrl(context)
+        }
         val model = ServicesPrefs.imageModel(context)
         val steps = ServicesPrefs.imageSteps(context)
         val apiKey = ServicesPrefs.imageApiKey(context)
@@ -58,11 +120,20 @@ class ImageGenClient {
         runCatching {
             when (source) {
                 "openai" -> openAi(context, fullPrompt)
-                "sdcpp" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = true)
+                "sdcpp" -> auto1111(context, url, null, fullPrompt, fullNegative, steps, model, sdcpp = true)
                 "novel" -> novel(context, fullPrompt, fullNegative, model, apiKey)
                 "huggingface" -> huggingface(context, fullPrompt, apiKey)
                 "horde" -> horde(context, fullPrompt, fullNegative, model, apiKey)
-                "vlad" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = false) // SD.Next 同走 /sdapi/v1/txt2img（vladmandic/automatic1111 API 兼容）；登记：sd_vlad_url 字段并入 sd_url
+                // SD.Next 同走 /sdapi/v1/txt2img（vladmandic/automatic1111 API 兼容），带 vlad_auth Basic 头
+                "vlad" -> auto1111(context, url, ServicesPrefs.vladAuth(context), fullPrompt, fullNegative, steps, model, sdcpp = false)
+                "drawthings" ->
+                    drawthings(
+                        context,
+                        ServicesPrefs.drawthingsUrl(context),
+                        ServicesPrefs.drawthingsAuth(context),
+                        fullPrompt,
+                        fullNegative,
+                    )
                 "comfy" -> if (ServicesPrefs.comfyType(context) == "runpod_serverless") {
                     ImageGenBackendsLlm.generate(context, "comfy_runpod", fullPrompt, fullNegative)
                 } else {
@@ -71,9 +142,9 @@ class ImageGenClient {
                 "togetherai", "pollinations", "stability", "aimlapi", "chutes",
                 "electronhub", "nanogpt", "bfl", "xai" ->
                     ImageGenBackendsCloud.generate(context, source, fullPrompt, fullNegative)
-                "google", "zai", "openrouter", "workersai", "falai", "extras", "drawthings" ->
+                "google", "zai", "openrouter", "workersai", "falai", "extras" ->
                     ImageGenBackendsLlm.generate(context, source, fullPrompt, fullNegative)
-                else -> auto1111(context, url, fullPrompt, fullNegative, steps, null, sdcpp = false)
+                else -> auto1111(context, url, ServicesPrefs.autoAuth(context), fullPrompt, fullNegative, steps, null, sdcpp = false)
             }
         }.getOrNull()
     }
@@ -286,10 +357,18 @@ class ImageGenClient {
         }
     }
 
+    /**
+     * 官方 getBasicAuthHeader（src/util.js L126-L129）：`Basic base64(auth)`——空串也发（"Basic "）。
+     * auto/vlad/drawthings 恒带；sdcpp 服务端不发。
+     */
+    private fun basicAuthHeader(auth: String): String =
+        "Basic " + android.util.Base64.encodeToString(auth.toByteArray(), android.util.Base64.NO_WRAP)
+
     /** AUTOMATIC1111 / SDCPP：POST {url}/sdapi/v1/txt2img（官方 generateAutoImage/generateSdcppImage 请求体 1:1）。 */
     private fun auto1111(
         context: Context,
         url: String,
+        auth: String?,
         prompt: String,
         negativePrompt: String,
         steps: Int,
@@ -323,6 +402,42 @@ class ImageGenClient {
         }.toString()
         val request = Request.Builder()
             .url(url.trimEnd('/') + "/sdapi/v1/txt2img")
+            .post(payload.toRequestBody(jsonMedia))
+            // 官方服务端 /api/sd/generate 恒带 Basic auth（sdcpp /generate 不带）
+            .apply { if (!sdcpp && auth != null) header("Authorization", basicAuthHeader(auth)) }
+            .build()
+        client.newCall(request).execute().use { resp ->
+            if (!resp.isSuccessful) return null
+            val images = JSONObject(resp.body?.string().orEmpty()).optJSONArray("images") ?: return null
+            val base64 = images.optString(0)
+            return runCatching { saveBase64(context, base64, "png") }.getOrNull()
+        }
+    }
+
+    /**
+     * DrawThings（官方 generateDrawthingsImage index.js L3918-L3944 + 服务端 drawthings/generate
+     * stable-diffusion.js L975-L1001 合并）：POST {url}/sdapi/v1/txt2img，body 为设置键直传
+     * （引擎 [ImageGenRequestEngine.drawthingsPayload]，差分 3 例），恒带 Basic auth 头。
+     */
+    private fun drawthings(context: Context, url: String, auth: String, prompt: String, negativePrompt: String): String? {
+        if (url.isBlank()) return null
+        val settings = ImageGenRequestEngine.ImageGenSettings(
+            sampler = ServicesPrefs.imageSampler(context),
+            steps = ServicesPrefs.imageSteps(context),
+            scale = ServicesPrefs.imageScale(context),
+            width = ServicesPrefs.imageWidth(context),
+            height = ServicesPrefs.imageHeight(context),
+            restoreFaces = ServicesPrefs.imageRestoreFaces(context),
+            enableHr = ServicesPrefs.imageEnableHr(context),
+            denoisingStrength = ServicesPrefs.imageDenoisingStrength(context),
+            clipSkip = ServicesPrefs.imageClipSkip(context),
+            hrScale = ServicesPrefs.imageHrScale(context),
+            seed = ServicesPrefs.imageSeed(context),
+        )
+        val payload = ImageGenRequestEngine.drawthingsPayload(settings, prompt, negativePrompt).toString()
+        val request = Request.Builder()
+            .url(url.trimEnd('/') + "/sdapi/v1/txt2img")
+            .header("Authorization", basicAuthHeader(auth))
             .post(payload.toRequestBody(jsonMedia))
             .build()
         client.newCall(request).execute().use { resp ->

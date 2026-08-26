@@ -1569,6 +1569,72 @@
       "expected": {
         "result": 9.671528397231821
       }
+    },
+    {
+      "id": "077-drawthings-defaults-seed-random",
+      "kind": "drawthings-body",
+      "args": {
+        "prompt": "a cat",
+        "negativePrompt": "lowres",
+        "sampler": "DDIM",
+        "steps": 20,
+        "scale": 7,
+        "width": 512,
+        "height": 512,
+        "restoreFaces": false,
+        "enableHr": false,
+        "denoisingStrength": 0.7,
+        "clipSkip": 1,
+        "hrScale": 1,
+        "seed": -1
+      },
+      "expected": {
+        "result": "{\"prompt\":\"a cat\",\"negative_prompt\":\"lowres\",\"sampler_name\":\"DDIM\",\"steps\":20,\"cfg_scale\":7,\"width\":512,\"height\":512,\"restore_faces\":false,\"enable_hr\":false,\"denoising_strength\":0.7,\"clip_skip\":1,\"upscaler_scale\":1}"
+      }
+    },
+    {
+      "id": "078-drawthings-seed-fixed-hr-scale",
+      "kind": "drawthings-body",
+      "args": {
+        "prompt": "portrait, detailed",
+        "negativePrompt": "blurry",
+        "sampler": "Euler a",
+        "steps": 28,
+        "scale": 6.5,
+        "width": 768,
+        "height": 512,
+        "restoreFaces": true,
+        "enableHr": true,
+        "denoisingStrength": 0.55,
+        "clipSkip": 2,
+        "hrScale": 1.5,
+        "seed": 123456789
+      },
+      "expected": {
+        "result": "{\"prompt\":\"portrait, detailed\",\"negative_prompt\":\"blurry\",\"sampler_name\":\"Euler a\",\"steps\":28,\"cfg_scale\":6.5,\"width\":768,\"height\":512,\"restore_faces\":true,\"enable_hr\":true,\"denoising_strength\":0.55,\"clip_skip\":2,\"upscaler_scale\":1.5,\"seed\":123456789}"
+      }
+    },
+    {
+      "id": "079-drawthings-denoising-integer-one",
+      "kind": "drawthings-body",
+      "args": {
+        "prompt": "x",
+        "negativePrompt": "",
+        "sampler": "DDIM",
+        "steps": 20,
+        "scale": 7,
+        "width": 512,
+        "height": 512,
+        "restoreFaces": false,
+        "enableHr": false,
+        "denoisingStrength": 1,
+        "clipSkip": 1,
+        "hrScale": 1,
+        "seed": 7
+      },
+      "expected": {
+        "result": "{\"prompt\":\"x\",\"negative_prompt\":\"\",\"sampler_name\":\"DDIM\",\"steps\":20,\"cfg_scale\":7,\"width\":512,\"height\":512,\"restore_faces\":false,\"enable_hr\":false,\"denoising_strength\":1,\"clip_skip\":1,\"upscaler_scale\":1,\"seed\":7}"
+      }
     }
   ]
 }
