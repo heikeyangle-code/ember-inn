@@ -194,7 +194,6 @@ class ImageGenClient {
                 else -> auto1111(context, url, ServicesPrefs.autoAuth(context), fullPrompt, fullNegative, steps, null, sdcpp = false)
             }
         }.getOrNull()
-    }
 
     /**
      * /imagine 入口（官方 applyCommandArguments index.js L5384-L5443 语义）：把命令命名参数临时

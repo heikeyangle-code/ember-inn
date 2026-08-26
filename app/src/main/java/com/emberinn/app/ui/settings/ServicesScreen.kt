@@ -431,7 +431,9 @@ private fun ImageCard() {
         // 官方逐源 URL/auth 字段 + 验证按钮（settings.html sd_auto/sdcpp/drawthings/vlad/comfy/
         // comfy_runpod_validate；服务端各 ping 路由语义见 ImageGenClient.pingSource）
         val scope = rememberCoroutineScope()
-        fun validateButton() = TextButton(onClick = {
+        // 局部函数不能调用 @Composable，改用 composable lambda（调用点写法不变）
+        val validateButton: @Composable () -> Unit = {
+            TextButton(onClick = {
             scope.launch {
                 val err = ImageGenClient().pingSource(context, source)
                 Toast.makeText(
@@ -448,6 +450,7 @@ private fun ImageCard() {
                     else -> "测试连接"
                 },
             )
+        }
         }
         when (source) {
             "auto" -> {
