@@ -160,7 +160,8 @@ class ImageGenClient {
         val s1 = process(str1)
         val s2 = process(str2)
         val result =
-            if (macro.isNotEmpty() && s1.contains(macro)) Regex(Regex.escape(macro)).replaceFirst(s1) { s2 }
+            // JS str1.replace(macro, str2)：字符串搜索、仅首处、字面替换（非正则）
+            if (macro.isNotEmpty() && s1.contains(macro)) Regex(Regex.escape(macro)).replaceFirst(s1) { _ -> s2 }
             else "$s1, $s2,"
         return process(result)
     }
