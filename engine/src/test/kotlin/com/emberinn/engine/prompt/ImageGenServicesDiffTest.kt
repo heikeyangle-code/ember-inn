@@ -245,7 +245,9 @@ class ImageGenServicesDiffTest {
                     val clipSkip =
                         if (clipSkipEl == null || clipSkipEl is JsonNull) Double.NaN
                         else clipSkipEl.jsonPrimitive.content.toDouble()
-                    val str = { k: String -> args[k]?.jsonPrimitive?.contentOrNull ?: "" }
+                    // 官方 extension_settings.sd.* 对应 fixture 的 settings 子对象
+                    val st = args["settings"]?.jsonObject
+                    val setting = { k: String -> st?.get(k)?.jsonPrimitive?.contentOrNull ?: "" }
                     val actual = ImageGenRequestEngine.replaceComfyWorkflow(
                         workflow = workflow,
                         runPod = args["runPod"]?.jsonPrimitive?.content == "true",
@@ -254,14 +256,14 @@ class ImageGenServicesDiffTest {
                         seed = seed,
                         denoisingStrength = denoise,
                         clipSkip = clipSkip,
-                        model = str("model"),
-                        vae = str("vae"),
-                        sampler = str("sampler"),
-                        scheduler = str("scheduler"),
-                        steps = str("steps").toIntOrNull() ?: 0,
-                        scale = str("scale").toDoubleOrNull() ?: 0.0,
-                        width = str("width").toIntOrNull() ?: 0,
-                        height = str("height").toIntOrNull() ?: 0,
+                        model = setting("model"),
+                        vae = setting("vae"),
+                        sampler = setting("sampler"),
+                        scheduler = setting("scheduler"),
+                        steps = setting("steps").toIntOrNull() ?: 0,
+                        scale = setting("scale").toDoubleOrNull() ?: 0.0,
+                        width = setting("width").toIntOrNull() ?: 0,
+                        height = setting("height").toIntOrNull() ?: 0,
                     )
                     val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content
                     assertEquals("case $id", expectedResult, actual)

@@ -87,29 +87,36 @@ class ImageGenClient {
         negativePrefix: String,
         args: Map<String, String>,
     ): String? = withContext(Dispatchers.IO) {
-        val overrides = commandSettingMap.entries.filter { it.key in args }
+        val overrides: Map<String, Pair<String, String>> = commandSettingMap.filterKeys { it in args }
         if (overrides.isEmpty()) return@withContext generate(context, prompt, additionalNegativePrefix = negativePrefix)
         val prefs = context.getSharedPreferences("ember_services", Context.MODE_PRIVATE)
-        val old = overrides.entries.associate { (_, spec) -> spec.first to prefs.all[spec.first] }
+        val oldKeys = ArrayList<String>()
+        val oldValues = ArrayList<Any?>()
+        for ((_, spec) in overrides) {
+            oldKeys.add(spec.first)
+            oldValues.add(prefs.all[spec.first])
+        }
         try {
-            prefs.edit().apply {
-                overrides.forEach { (arg, spec) ->
-                    val (key, type) = spec
-                    val value = args[arg] ?: return@forEach
-                    when (type) {
-                        "long" -> putLong(key, value.toDoubleOrNull()?.toLong() ?: -1L)
-                        "int" -> putInt(key, value.toDoubleOrNull()?.toInt() ?: 0)
-                        "float" -> putFloat(key, value.toFloatOrNull() ?: 0f)
-                        "bool" -> putBoolean(key, value.equals("true", ignoreCase = true))
-                        else -> putString(key, value)
-                    }
+            val editor = prefs.edit()
+            for ((arg, spec) in overrides) {
+                val key = spec.first
+                val type = spec.second
+                val value = args[arg] ?: continue
+                when (type) {
+                    "long" -> editor.putLong(key, value.toDoubleOrNull()?.toLong() ?: -1L)
+                    "int" -> editor.putInt(key, value.toDoubleOrNull()?.toInt() ?: 0)
+                    "float" -> editor.putFloat(key, value.toFloatOrNull() ?: 0f)
+                    "bool" -> editor.putBoolean(key, value.equals("true", ignoreCase = true))
+                    else -> editor.putString(key, value)
                 }
-            }.commit()
+            }
+            editor.commit()
             generate(context, prompt, additionalNegativePrefix = negativePrefix)
         } finally {
             val restore = prefs.edit()
-            old.forEach { (key, v) ->
-                when (v) {
+            for (i in oldKeys.indices) {
+                val key = oldKeys[i]
+                when (val v = oldValues[i]) {
                     is Int -> restore.putInt(key, v)
                     is Long -> restore.putLong(key, v)
                     is Float -> restore.putFloat(key, v)
@@ -123,23 +130,23 @@ class ImageGenClient {
     }
 
     /** 官方 applyCommandArguments settingMap：命令参数名 → (prefs 键, 类型)。 */
-    private val commandSettingMap = mapOf(
-        "seed" to ("sd_seed" to "long"),
-        "width" to ("sd_width" to "int"),
-        "height" to ("sd_height" to "int"),
-        "steps" to ("sd_steps" to "int"),
-        "cfg" to ("sd_scale" to "float"),
-        "skip" to ("sd_clip_skip" to "int"),
-        "model" to ("sd_model" to "string"),
-        "sampler" to ("sd_sampler" to "string"),
-        "scheduler" to ("sd_scheduler" to "string"),
-        "vae" to ("sd_vae" to "string"),
-        "upscaler" to ("sd_hr_upscaler" to "string"),
-        "scale" to ("sd_hr_scale" to "float"),
-        "hires" to ("sd_enable_hr" to "bool"),
-        "denoise" to ("sd_denoising_strength" to "float"),
-        "2ndpass" to ("sd_hr_second_pass_steps" to "int"),
-        "faces" to ("sd_restore_faces" to "bool"),
+    private val commandSettingMap: Map<String, Pair<String, String>> = mapOf(
+        "seed" to Pair("sd_seed", "long"),
+        "width" to Pair("sd_width", "int"),
+        "height" to Pair("sd_height", "int"),
+        "steps" to Pair("sd_steps", "int"),
+        "cfg" to Pair("sd_scale", "float"),
+        "skip" to Pair("sd_clip_skip", "int"),
+        "model" to Pair("sd_model", "string"),
+        "sampler" to Pair("sd_sampler", "string"),
+        "scheduler" to Pair("sd_scheduler", "string"),
+        "vae" to Pair("sd_vae", "string"),
+        "upscaler" to Pair("sd_hr_upscaler", "string"),
+        "scale" to Pair("sd_hr_scale", "float"),
+        "hires" to Pair("sd_enable_hr", "bool"),
+        "denoise" to Pair("sd_denoising_strength", "float"),
+        "2ndpass" to Pair("sd_hr_second_pass_steps", "int"),
+        "faces" to Pair("sd_restore_faces", "bool"),
     )
 
     /**
