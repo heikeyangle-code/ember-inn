@@ -785,13 +785,24 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun sendImageRequest(prompt: String, trigger: String, mode: Int, message: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val ctx = getApplication<Application>()
+            // 官方 noCharPrefix（index.js L3318）：USER/FREE/BACKGROUND/USER_MULTIMODAL/FREE_EXTENDED
+            // 模式不拼角色前缀（官方仅 swipe 重生成豁免；App 无 swipe 生图入口，恒不豁免）
+            val skipCharPrefix = mode == ImageGenPromptEngine.MODE_USER ||
+                mode == ImageGenPromptEngine.MODE_FREE ||
+                mode == ImageGenPromptEngine.MODE_BACKGROUND ||
+                mode == ImageGenPromptEngine.MODE_USER_MULTIMODAL ||
+                mode == ImageGenPromptEngine.MODE_FREE_EXTENDED
             val path = imageGenClient.generate(
                 ctx,
                 prompt,
-                negativePrompt = ServicesPrefs.imageCharaNegativePrompt(ctx, character?.id),
-                extraPrompt = ServicesPrefs.imageCharaPrompt(ctx, character?.id),
+                negativePrompt =
+                    if (skipCharPrefix) "" else ServicesPrefs.imageCharaNegativePrompt(ctx, character?.id),
+                extraPrompt =
+                    if (skipCharPrefix) "" else ServicesPrefs.imageCharaPrompt(ctx, character?.id),
                 // 官方 generatePicture(generationType)：FACE/BACKGROUND 等模式驱动尺寸调整+snap
                 generationType = mode,
+                // comfy %char_avatar% 注入（官方 getCharacterAvatarUrl()）
+                charAvatarPath = character?.avatarPath,
             )
             withContext(Dispatchers.Main) {
                 if (path != null) {
@@ -822,6 +833,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 text,
                 negativePrompt = ServicesPrefs.imageCharaNegativePrompt(ctx, character?.id),
                 extraPrompt = ServicesPrefs.imageCharaPrompt(ctx, character?.id),
+                // comfy %char_avatar% 注入（官方 getCharacterAvatarUrl()）
+                charAvatarPath = character?.avatarPath,
             )
             withContext(Dispatchers.Main) {
                 if (path != null) {

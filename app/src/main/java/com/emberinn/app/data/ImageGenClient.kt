@@ -99,6 +99,8 @@ class ImageGenClient {
         generationType: Int = -1,
         mediaWidth: Int? = null,
         mediaHeight: Int? = null,
+        // comfy 占位符 %char_avatar% 注入用（官方 getCharacterAvatarUrl() 取当前角色头像）
+        charAvatarPath: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         if (prompt.isBlank()) return@withContext null
         val source = ServicesPrefs.imageSource(context)
@@ -143,7 +145,7 @@ class ImageGenClient {
                 .apply()
         }
         try {
-            dispatchGenerate(context, source, url, model, steps, apiKey, fullPrompt, fullNegative)
+            dispatchGenerate(context, source, url, model, steps, apiKey, fullPrompt, fullNegative, charAvatarPath)
         } finally {
             if (dimsAdjusted) {
                 context.getSharedPreferences("ember_services", Context.MODE_PRIVATE).edit()
@@ -164,6 +166,7 @@ class ImageGenClient {
         apiKey: String,
         fullPrompt: String,
         fullNegative: String,
+        charAvatarPath: String? = null,
     ): String? = runCatching {
             when (source) {
                 "openai" -> openAi(context, fullPrompt)
@@ -182,9 +185,9 @@ class ImageGenClient {
                         fullNegative,
                     )
                 "comfy" -> if (ServicesPrefs.comfyType(context) == "runpod_serverless") {
-                    ImageGenBackendsLlm.generate(context, "comfy_runpod", fullPrompt, fullNegative)
+                    ImageGenBackendsLlm.generate(context, "comfy_runpod", fullPrompt, fullNegative, charAvatarPath)
                 } else {
-                    comfy(context, url, fullPrompt, fullNegative)
+                    comfy(context, url, fullPrompt, fullNegative, charAvatarPath)
                 }
                 "togetherai", "pollinations", "stability", "aimlapi", "chutes",
                 "electronhub", "nanogpt", "bfl", "xai" ->
@@ -700,7 +703,13 @@ class ImageGenClient {
      * - outputs 各节点 images 平铺第一张优先，整体没有再取 gifs 平铺第一张（官方 L616-617）；
      *   GET /view 下载，query 官方直接插值不做 URL 编码；扩展名 extname || 'png'。
      */
-    private fun comfy(context: Context, url: String, prompt: String, negativePrompt: String): String? {
+    private fun comfy(
+        context: Context,
+        url: String,
+        prompt: String,
+        negativePrompt: String,
+        charAvatarPath: String?,
+    ): String? {
         if (url.isBlank()) return null
         val workflow = ComfyWorkflowStore(context).activeWorkflowJson()
         if (workflow.isBlank()) return null
@@ -735,9 +744,16 @@ class ImageGenClient {
                 )
             },
         )
+        // 官方 generateComfyImageCommon 末端（index.js L4251-L4271）：%user_avatar% 取激活
+        // 人格头像、%char_avatar% 取当前角色头像，base64 注入（失败回退 PNG_PIXEL）
+        val withAvatars = injectComfyAvatars(
+            workflow = replaced,
+            userAvatarFile = PersonaStore(context).active()?.avatarPath?.takeIf { it.isNotBlank() }?.let { File(it) },
+            charAvatarFile = charAvatarPath?.takeIf { it.isNotBlank() }?.let { File(it) },
+        )
 
         // 官方模板字符串原样（index.js L4283-4286）：换行与缩进都保留在线上字节里
-        val submitBody = "{\n                \"prompt\": $replaced\n            }"
+        val submitBody = "{\n                \"prompt\": $withAvatars\n            }"
         val submit = Request.Builder()
             .url(url.trimEnd('/') + "/prompt")
             .post(submitBody.toRequestBody(jsonMedia))

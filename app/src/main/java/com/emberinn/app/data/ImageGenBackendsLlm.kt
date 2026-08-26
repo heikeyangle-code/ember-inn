@@ -26,7 +26,7 @@ import org.json.JSONObject
  * App 层只做：①从 ServicesPrefs 取参数构造纯值（int/double/String/Boolean）；②调引擎层方法
  * 得 JsonObject body；③拼 URL + Header + 发请求 + 响应解析（落盘 saveBase64/saveFromUrl）。
  *
- * 后端分类（共 8）：
+ * 后端分类（共 7）：
  * - ✅ 可差分并改接线：Google（客户端 body）、ZAI（客户端 body，不含尺寸 while 预处理）、
  *   OpenRouter（客户端 body）、FalAI（服务端加工后 requestBody，同步 rest.fal.ai）、
  *   WorkersAI（客户端 body，服务端翻译为 Cloudflare form 不在差分范围）、ComfyRunPod
@@ -50,7 +50,13 @@ object ImageGenBackendsLlm {
      * 按 source 分派（对照官方 stable-diffusion/settings.html sd_source 选项）。
      * drawthings 在 ImageGenClient 直连处理。ComfyRunPod 失败：endpoint_id / workflow / apiKey 任一缺失。
      */
-    suspend fun generate(context: Context, source: String, prompt: String, negativePrompt: String): String? =
+    suspend fun generate(
+        context: Context,
+        source: String,
+        prompt: String,
+        negativePrompt: String,
+        charAvatarPath: String? = null,
+    ): String? =
         withContext(Dispatchers.IO) {
             runCatching {
                 when (source) {
@@ -60,7 +66,7 @@ object ImageGenBackendsLlm {
                     "workersai" -> generateWorkersAIImage(context, prompt, negativePrompt)
                     "falai" -> generateFalaiImage(context, prompt)
                     "extras" -> generateExtrasImage(context, prompt, negativePrompt)
-                    "comfy_runpod" -> generateComfyRunPodImage(context, prompt, negativePrompt)
+                    "comfy_runpod" -> generateComfyRunPodImage(context, prompt, negativePrompt, charAvatarPath)
                     else -> null
                 }
             }.getOrNull()
@@ -341,15 +347,6 @@ object ImageGenBackendsLlm {
         }.getOrNull()
     }
 
-    // ------------------------------------------------------------- DrawThings
-    /** macOS only，登记不实现（Apple 专用）。 */
-    @Suppress("UNUSED_PARAMETER")
-    suspend fun generateDrawthingsImage(
-        context: Context,
-        prompt: String,
-        negativePrompt: String = "",
-    ): String? = null
-
     // --------------------------------------------------------- ComfyRunPod
     /**
      * ComfyUI on RunPod：占位符替换由 [ImageGenRequestEngine.replaceComfyWorkflow]（runPod=true，
@@ -363,6 +360,7 @@ object ImageGenBackendsLlm {
         context: Context,
         prompt: String,
         negativePrompt: String = "",
+        charAvatarPath: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         runCatching {
             val apiKey = ServicesPrefs.imageApiKey(context)
@@ -390,7 +388,14 @@ object ImageGenBackendsLlm {
                 width = ServicesPrefs.imageWidth(context),
                 height = ServicesPrefs.imageHeight(context),
             )
-            val workflowObj = runCatching { JSONObject(replaced) }.getOrNull()
+            // 官方 generateComfyImageCommon 末端（index.js L4251-L4271）：头像注入对
+            // comfy 与 comfy_runpod 两条路径同样生效（共用该函数）
+            val withAvatars = injectComfyAvatars(
+                workflow = replaced,
+                userAvatarFile = PersonaStore(context).active()?.avatarPath?.takeIf { it.isNotBlank() }?.let { File(it) },
+                charAvatarFile = charAvatarPath?.takeIf { it.isNotBlank() }?.let { File(it) },
+            )
+            val workflowObj = runCatching { JSONObject(withAvatars) }.getOrNull()
                 ?: return@runCatching null
             // 官方服务端 L684-685：workflow.input.workflow 存在则原样，否则包一层 {input:{workflow}}
             val wrapped =
@@ -472,4 +477,34 @@ object ImageGenBackendsLlm {
         file.writeBytes(bytes)
         return file.absolutePath
     }
+}
+
+
+/** 官方 PNG_PIXEL（stable-diffusion/index.js L71）：1x1 透明 PNG 的 base64，头像读取失败时的占位。 */
+private const val COMFY_PNG_PIXEL =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+
+/**
+ * 官方 %user_avatar%/%char_avatar% 注入（generateComfyImageCommon index.js L4251-L4271）：
+ * 大小写不敏感命中才处理；头像文件读出的 base64（无 data: 前缀）JSON.stringify 成带引号字符串，
+ * 全量替换带引号占位符 '"%xxx%"'；文件缺失/读取失败回退官方 PNG_PIXEL。
+ * comfy 与 comfy_runpod 共用（官方两路同走 generateComfyImageCommon）。
+ */
+internal fun injectComfyAvatars(workflow: String, userAvatarFile: File?, charAvatarFile: File?): String {
+    var out = workflow
+    if (Regex("%user_avatar%", RegexOption.IGNORE_CASE).containsMatchIn(out)) {
+        val b64 = userAvatarFile?.takeIf { it.exists() }
+            ?.let { f ->
+                runCatching { android.util.Base64.encodeToString(f.readBytes(), android.util.Base64.NO_WRAP) }.getOrNull()
+            } ?: COMFY_PNG_PIXEL
+        out = out.replace("\"%user_avatar%\"", "\"$b64\"")
+    }
+    if (Regex("%char_avatar%", RegexOption.IGNORE_CASE).containsMatchIn(out)) {
+        val b64 = charAvatarFile?.takeIf { it.exists() }
+            ?.let { f ->
+                runCatching { android.util.Base64.encodeToString(f.readBytes(), android.util.Base64.NO_WRAP) }.getOrNull()
+            } ?: COMFY_PNG_PIXEL
+        out = out.replace("\"%char_avatar%\"", "\"$b64\"")
+    }
+    return out
 }

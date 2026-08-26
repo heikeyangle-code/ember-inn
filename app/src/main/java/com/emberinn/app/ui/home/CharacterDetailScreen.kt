@@ -76,6 +76,7 @@ import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.ui.settings.BehaviorPrefs
+import com.emberinn.app.ui.settings.ServicesPrefs
 import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterRegexScript
@@ -131,6 +132,11 @@ fun CharacterDetailScreen(
     var themeRecipe by remember(record.id) { mutableStateOf(vm.readThemeRecipe(record)) }
     var themeRecipeExpanded by remember { mutableStateOf(false) }
     var editingThemeRecipe by remember { mutableStateOf(false) }
+    // 官方 sd_character_prompt_block（settings.html L609-L625）：角色专属正/负提示词前缀，
+    // 存 extension_settings.sd.character_prompts / character_negative_prompts（App 按角色 id 存 prefs）；
+    // 群聊不使用（官方 "Won't be used in groups."）
+    var charaImagePrompt by remember(record.id) { mutableStateOf(ServicesPrefs.imageCharaPrompt(context, record.id)) }
+    var charaImageNegative by remember(record.id) { mutableStateOf(ServicesPrefs.imageCharaNegativePrompt(context, record.id)) }
     var dirty by remember { mutableStateOf(false) }
 
     var editingKey by remember { mutableStateOf<String?>(null) }
@@ -684,6 +690,43 @@ fun CharacterDetailScreen(
                         FieldRow("标签", fields.tags) {
                             editingKey = "tags"; fieldDraft = fields.tags
                         }
+                    }
+                }
+
+                // 官方 sd_character_prompt_block：角色专属图像提示词前缀（正/负），生成时拼在
+                // 公共前缀之后（noCharPrefix 模式除外）；群聊不使用
+                item {
+                    SectionCard("图像提示词（该卡）") {
+                        ShellInput(
+                            value = charaImagePrompt,
+                            onValueChange = {
+                                charaImagePrompt = it
+                                ServicesPrefs.saveImageCharaPrompts(context, record.id, it, charaImageNegative)
+                            },
+                            label = "角色专属提示词前缀",
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 8,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        )
+                        ShellInput(
+                            value = charaImageNegative,
+                            onValueChange = {
+                                charaImageNegative = it
+                                ServicesPrefs.saveImageCharaPrompts(context, record.id, charaImagePrompt, it)
+                            },
+                            label = "角色专属负向提示词前缀",
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 8,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        )
+                        Text(
+                            "描述该角色外貌特征的画图提示词，拼在公共提示词前缀之后；负向同理。群聊不使用。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EmberTheme.colors.inkMute,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        )
                     }
                 }
 
