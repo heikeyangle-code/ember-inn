@@ -151,8 +151,8 @@ class ImageGenClient {
 
     /**
      * 官方 combinePrefixes（stable-diffusion/index.js L969-L984）：两端去空白与首尾逗号后 ', ' 连接；
-     * [macro] 在 str1 中出现时仅首处原位替换为 str2（JS String.replace 单次替换语义），不追加；
-     * str2 为空原样返回 str1。
+     * [macro] 在 str1 中出现时仅首处原位替换为 str2（JS String.replace 单次替换语义，含替换串
+     * 特殊模式 $$/$&/$`/$' 展开——见 [jsReplaceReplacement]），不追加；str2 为空原样返回 str1。
      */
     private fun combinePrefixes(str1: String, str2: String, macro: String = ""): String {
         if (str2.isEmpty()) return str1
@@ -160,10 +160,39 @@ class ImageGenClient {
         val s1 = process(str1)
         val s2 = process(str2)
         val result =
-            // JS str1.replace(macro, str2)：字符串搜索、仅首处、字面替换（非正则）
-            if (macro.isNotEmpty() && s1.contains(macro)) Regex(Regex.escape(macro)).replaceFirst(s1) { _ -> s2 }
-            else "$s1, $s2,"
+            // JS str1.replace(macro, str2)：字符串搜索、仅首处、字面匹配（非正则）
+            if (macro.isNotEmpty()) {
+                val idx = s1.indexOf(macro)
+                if (idx >= 0) {
+                    val replacement = jsReplaceReplacement(
+                        s2,
+                        matched = macro,
+                        before = s1.substring(0, idx),
+                        after = s1.substring(idx + macro.length),
+                    )
+                    s1.substring(0, idx) + replacement + s1.substring(idx + macro.length)
+                } else "$s1, $s2,"
+            } else "$s1, $s2,"
         return process(result)
+    }
+
+    /** JS 字符串替换的替换串特殊模式：$$→$、$&→被匹配段、$`→匹配前文、$'→匹配后文（其余字面）。 */
+    private fun jsReplaceReplacement(replacement: String, matched: String, before: String, after: String): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < replacement.length) {
+            val c = replacement[i]
+            if (c == '$' && i + 1 < replacement.length) {
+                when (replacement[i + 1]) {
+                    '$' -> { sb.append('$'); i += 2; continue }
+                    '&' -> { sb.append(matched); i += 2; continue }
+                    '`' -> { sb.append(before); i += 2; continue }
+                    '\'' -> { sb.append(after); i += 2; continue }
+                }
+            }
+            sb.append(c); i += 1
+        }
+        return sb.toString()
     }
 
     /**
