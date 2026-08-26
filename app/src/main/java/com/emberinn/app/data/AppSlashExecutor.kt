@@ -564,17 +564,18 @@ class AppSlashExecutor(
                     }
                 },
             ),
-            // stable-diffusion 扩展（官方 /imagine：调 ImageGenClient 生成）
+            // stable-diffusion 扩展（官方 /imagine index.js L5492：aliases sd/img/image；
+            // 命名参数经 applyCommandArguments 临时覆盖设置；失败返回空串，官方 returns 'URL or empty string'）
             SlashCommandDef(
                 "imagine",
-                description = "文生图（prompt 用无名参数；negative= 可选）",
+                aliases = listOf("sd", "img", "image"),
+                description = "文生图（prompt 无名参数；negative= 负面前缀；seed=/width=/height=/steps=/cfg=/skip=/model=/sampler=/scheduler=/vae=/hires=/denoise=/faces= 等临时覆盖设置）",
                 rawQuotes = true,
                 callback = { _, _ -> "" },
                 suspendCallback = { inv, _ ->
                     val prompt = inv.unnamedArgs.joinToString(" ")
                     val negative = inv.namedArgs["negative"] ?: ""
-                    val path = ImageGenClient().generate(ctx, prompt, negative)
-                    path ?: "ERR:imagine:failed"
+                    ImageGenClient().generateWithOverrides(ctx, prompt, negative, inv.namedArgs) ?: ""
                 },
             ),
         )

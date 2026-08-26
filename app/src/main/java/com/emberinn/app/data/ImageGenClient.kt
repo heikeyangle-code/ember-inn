@@ -1,6 +1,7 @@
 package com.emberinn.app.data
 
 import android.content.Context
+import com.emberinn.engine.prompt.ImageGenRequestEngine
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.app.ui.settings.ServicesPrefs
 import java.io.File
@@ -32,25 +33,33 @@ class ImageGenClient {
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
 
     /** 返回生成的图片本地路径（失败返回 null）。 */
-    suspend fun generate(context: Context, prompt: String, negativePrompt: String = "", extraPrompt: String = ""): String? = withContext(Dispatchers.IO) {
+    suspend fun generate(
+        context: Context,
+        prompt: String,
+        negativePrompt: String = "",
+        extraPrompt: String = "",
+        additionalNegativePrefix: String = "",
+    ): String? = withContext(Dispatchers.IO) {
         if (prompt.isBlank()) return@withContext null
         val source = ServicesPrefs.imageSource(context)
         val url = ServicesPrefs.imageUrl(context)
         val model = ServicesPrefs.imageModel(context)
         val steps = ServicesPrefs.imageSteps(context)
         val apiKey = ServicesPrefs.imageApiKey(context)
-        // 官方 generatePicture：prompt = prompt_prefix + 角色前缀 + 用户提示；negative 同理
-        val prefix = ServicesPrefs.imagePromptPrefix(context)
-        val fullPrompt = listOf(prefix, extraPrompt, prompt).filter { it.isNotBlank() }.joinToString("\n")
-        val fullNegative = listOf(ServicesPrefs.imageNegativePrompt(context), negativePrompt)
-            .filter { it.isNotBlank() }.joinToString("\n")
+        // 官方 generatePicture L3324-L3338：
+        // prompt 链 = combine(combine(prompt_prefix, 角色前缀), 用户文本, '{prompt}')
+        // 负面链 = combine(命令附加前缀, combine(negative_prompt 设置, 角色负面))
+        val prefix = combinePrefixes(ServicesPrefs.imagePromptPrefix(context), extraPrompt)
+        val fullPrompt = combinePrefixes(prefix, prompt, "{prompt}")
+        val negativeChain = combinePrefixes(ServicesPrefs.imageNegativePrompt(context), negativePrompt)
+        val fullNegative = combinePrefixes(additionalNegativePrefix, negativeChain)
         runCatching {
             when (source) {
                 "openai" -> openAi(context, fullPrompt)
                 "sdcpp" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = true)
-                "novel" -> novel(context, fullPrompt, model, apiKey, steps)
+                "novel" -> novel(context, fullPrompt, fullNegative, model, apiKey)
                 "huggingface" -> huggingface(context, fullPrompt, model, apiKey)
-                "horde" -> horde(context, fullPrompt, model, apiKey, steps)
+                "horde" -> horde(context, fullPrompt, fullNegative, model, apiKey)
                 "vlad" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = false) // SD.Next 同走 /sdapi/v1/txt2img（vladmandic/automatic1111 API 兼容）；登记：sd_vlad_url 字段并入 sd_url
                 "comfy" -> if (ServicesPrefs.comfyType(context) == "runpod_serverless") {
                     ImageGenBackendsLlm.generate(context, "comfy_runpod", fullPrompt, fullNegative)
@@ -67,19 +76,147 @@ class ImageGenClient {
         }.getOrNull()
     }
 
-    /** OpenAI gpt-image（复用提供商档案里的 Key；默认官方 /v1/images/generations）。 */
+    /**
+     * /imagine 入口（官方 applyCommandArguments index.js L5384-L5408 语义）：把命令命名参数临时
+     * 写入 SD 设置，生成后在 finally 恢复原值（官方 Object.assign(extension_settings.sd, currentSettings)）。
+     * settingMap 覆盖官方全部设置类参数；edit/extend/multimodal/processing 对应功能未接入——忽略。
+     */
+    suspend fun generateWithOverrides(
+        context: Context,
+        prompt: String,
+        negativePrefix: String,
+        args: Map<String, String>,
+    ): String? = withContext(Dispatchers.IO) {
+        val overrides = commandSettingMap.entries.filter { it.key in args }
+        if (overrides.isEmpty()) return@withContext generate(context, prompt, additionalNegativePrefix = negativePrefix)
+        val prefs = context.getSharedPreferences("ember_services", Context.MODE_PRIVATE)
+        val old = overrides.entries.associate { (_, spec) -> spec.first to prefs.all[spec.first] }
+        try {
+            prefs.edit().apply {
+                overrides.forEach { (arg, spec) ->
+                    val (key, type) = spec
+                    val value = args[arg] ?: return@forEach
+                    when (type) {
+                        "long" -> putLong(key, value.toDoubleOrNull()?.toLong() ?: -1L)
+                        "int" -> putInt(key, value.toDoubleOrNull()?.toInt() ?: 0)
+                        "float" -> putFloat(key, value.toFloatOrNull() ?: 0f)
+                        "bool" -> putBoolean(key, value.equals("true", ignoreCase = true))
+                        else -> putString(key, value)
+                    }
+                }
+            }.commit()
+            generate(context, prompt, additionalNegativePrefix = negativePrefix)
+        } finally {
+            val restore = prefs.edit()
+            old.forEach { (key, v) ->
+                when (v) {
+                    is Int -> restore.putInt(key, v)
+                    is Long -> restore.putLong(key, v)
+                    is Float -> restore.putFloat(key, v)
+                    is Boolean -> restore.putBoolean(key, v)
+                    is String -> restore.putString(key, v)
+                    else -> restore.remove(key) // 原本未写入 → 移除临时值，回落默认
+                }
+            }
+            restore.apply()
+        }
+    }
+
+    /** 官方 applyCommandArguments settingMap：命令参数名 → (prefs 键, 类型)。 */
+    private val commandSettingMap = mapOf(
+        "seed" to ("sd_seed" to "long"),
+        "width" to ("sd_width" to "int"),
+        "height" to ("sd_height" to "int"),
+        "steps" to ("sd_steps" to "int"),
+        "cfg" to ("sd_scale" to "float"),
+        "skip" to ("sd_clip_skip" to "int"),
+        "model" to ("sd_model" to "string"),
+        "sampler" to ("sd_sampler" to "string"),
+        "scheduler" to ("sd_scheduler" to "string"),
+        "vae" to ("sd_vae" to "string"),
+        "upscaler" to ("sd_hr_upscaler" to "string"),
+        "scale" to ("sd_hr_scale" to "float"),
+        "hires" to ("sd_enable_hr" to "bool"),
+        "denoise" to ("sd_denoising_strength" to "float"),
+        "2ndpass" to ("sd_hr_second_pass_steps" to "int"),
+        "faces" to ("sd_restore_faces" to "bool"),
+    )
+
+    /**
+     * 官方 combinePrefixes（stable-diffusion/index.js L969-L984）：两端去空白与首尾逗号后 ', ' 连接；
+     * [macro] 在 str1 中出现时仅首处原位替换为 str2（JS String.replace 单次替换语义），不追加；
+     * str2 为空原样返回 str1。
+     */
+    private fun combinePrefixes(str1: String, str2: String, macro: String = ""): String {
+        if (str2.isEmpty()) return str1
+        fun process(s: String): String = s.trim().replace(Regex("^,|,$"), "").trim()
+        val s1 = process(str1)
+        val s2 = process(str2)
+        val result =
+            if (macro.isNotEmpty() && s1.contains(macro)) Regex(Regex.escape(macro)).replaceFirst(s1) { s2 }
+            else "$s1, $s2,"
+        return process(result)
+    }
+
+    /**
+     * OpenAI 图像（官方客户端 generateOpenAiImage index.js L4073-L4160 逐字对齐；服务端
+     * /api/openai/generate-image 把 body 原样转发 api.openai.com/v1/images/generations，openai.js L641）：
+     * - model 读 ServicesPrefs.imageModel 原样；按模型族截断 prompt（dall-e-2 1000/dall-e-3 4000/
+     *   gpt-image-* 32000）。
+     * - size：默认 1024x1024；dall-e-3 宽高比 <1 → 高 1792、>1 → 宽 1792；gpt-image → 1536；
+     *   dall-e-2 且 w,h≤512 → 512x512。
+     * - quality/style/response_format/moderation 按模型族条件发送；undefined 字段不序列化。
+     *   openai_quality/openai_style/openai_quality_gpt App 无 UI → 官方默认值 'standard'/'vivid'/'auto'
+     *   （defaultSettings L328-L330）——登记 #16。sora-2 视频分支未接——登记偏差。
+     * - key 复用 OpenAI 提供商档案（官方读 SECRET_KEYS.OPENAI）。
+     */
     private fun openAi(context: Context, prompt: String): String? {
         val profile = ProviderStore(File(context.filesDir, "provider")).load()
         if (profile == null || profile.providerId != "openai" || profile.apiKey.isBlank()) return null
+        val model = ServicesPrefs.imageModel(context)
+        val isDalle2 = Regex("dall-e-2").containsMatchIn(model)
+        val isDalle3 = Regex("dall-e-3").containsMatchIn(model)
+        val isGptImg = Regex("gpt-image-(1|2|latest)").containsMatchIn(model)
+        var p = prompt
+        if (isDalle2 && p.length > 1000) p = p.substring(0, 1000)
+        if (isDalle3 && p.length > 4000) p = p.substring(0, 4000)
+        if (isGptImg && p.length > 32000) p = p.substring(0, 32000)
+
+        var width = 1024
+        var height = 1024
+        val sdWidth = ServicesPrefs.imageWidth(context)
+        val sdHeight = ServicesPrefs.imageHeight(context)
+        val aspectRatio = sdWidth.toDouble() / sdHeight
+        if (isDalle3 && aspectRatio < 1) height = 1792
+        if (isDalle3 && aspectRatio > 1) width = 1792
+        if (isGptImg && aspectRatio < 1) height = 1536
+        if (isGptImg && aspectRatio > 1) width = 1536
+        if (isDalle2 && sdWidth <= 512 && sdHeight <= 512) {
+            width = 512
+            height = 512
+        }
+
         val payload = JSONObject()
-            .put("model", "gpt-image-1")
-            .put("prompt", prompt)
-            .put("size", "1024x1024")
-            .toString()
+            .put("prompt", p)
+            .put("model", model)
+            .put("size", "${width}x${height}")
+            .put("n", 1)
+        // 官方 undefined 字段被 JSON.stringify 丢弃 → 仅对应模型族才 put
+        if (isDalle3) {
+            payload.put("quality", "standard")
+            payload.put("style", "vivid")
+            payload.put("response_format", "b64_json")
+        }
+        if (isGptImg) {
+            payload.put("quality", "auto")
+            payload.put("moderation", "low")
+        }
+        if (isDalle2) payload.put("response_format", "b64_json")
+
         val baseUrl = profile.baseUrlOverride.ifBlank { "https://api.openai.com/v1" }
         val request = Request.Builder()
             .url(baseUrl.trimEnd('/') + "/images/generations")
-            .post(payload.toRequestBody(jsonMedia))
+            .post(payload.toString().toRequestBody(jsonMedia))
             .header("Authorization", "Bearer ${profile.apiKey}")
             .build()
         client.newCall(request).execute().use { resp ->
@@ -138,44 +275,72 @@ class ImageGenClient {
     }
 
     /**
-     * NovelAI：POST https://image.novelai.net/ai/generate-image（官方 src/endpoints/novelai.js 1:1 请求体），
-     * 响应为 ZIP 归档；官方提取其中 PNG 回传 base64，本实现直接解压出 PNG 落盘。
+     * NovelAI：POST https://image.novelai.net/ai/generate-image。
+     * 官方客户端 generateNovelImage（index.js L3963-L3991）+ getNovelParams（L3989-L4027）+
+     * 服务端 novelai.js /generate-image（L300-L400）合并 1:1；App 直连 NAI（官方经 ST 服务端转发）：
+     * - steps = min(sd.steps, 50)；sampler/scale/width/height 读 ServicesPrefs（官方读 extension_settings.sd.*）；
+     *   scheduler 不在官方白名单 ['karras','native','exponential','polyexponential'] 时归一 'karras'（L2537-2539）。
+     * - seed：sd_seed >= 0 原样，否则 Math.floor(random01 * 9999999999)（服务端 L330，上界 9999999998）。
+     * - model 原样发送（官方 `request.body.model ?? 'nai-diffusion'` 对 '' 不兜底）。
+     * - sm/sm_dyn/dynamic_thresholding(decrisper)/variety_boost(skip_cfg_above_sigma)：App 无对应开关 UI →
+     *   按官方默认 false/false/null 发送；variety+ 公式 calculateSkipCfgAboveSigma（服务端 L120-L129）
+     *   与 upscale 二次调用（upscale_ratio>1 → /ai/upscale）未接——登记偏差待 #16。
      */
-    private fun novel(context: Context, prompt: String, model: String, apiKey: String, steps: Int): String? {
+    private fun novel(context: Context, prompt: String, negativePrompt: String, model: String, apiKey: String): String? {
         if (apiKey.isBlank()) return null
-        val seed = kotlin.random.Random.nextLong(0, 10_000_000_000)
+        val seedPref = ServicesPrefs.imageSeed(context)
+        val seed = if (seedPref >= 0) seedPref else Math.floor(kotlin.random.Random.nextDouble() * 9999999999.0).toLong()
+        val schedulers = listOf("karras", "native", "exponential", "polyexponential")
+        val schedulerPref = ServicesPrefs.imageScheduler(context)
+        val noiseSchedule = if (schedulerPref in schedulers) schedulerPref else "karras"
         val parameters = JSONObject()
             .put("params_version", 3)
             .put("prefer_brownian", true)
-            .put("negative_prompt", "")
-            .put("height", 512)
-            .put("width", 512)
-            .put("scale", 9)
+            .put("negative_prompt", negativePrompt)
+            .put("height", ServicesPrefs.imageHeight(context))
+            .put("width", ServicesPrefs.imageWidth(context))
+            .put("scale", ServicesPrefs.imageScale(context))
             .put("seed", seed)
-            .put("sampler", "k_dpmpp_2m")
-            .put("noise_schedule", "karras")
-            .put("steps", steps.coerceAtMost(50))
+            .put("sampler", ServicesPrefs.imageSampler(context))
+            .put("noise_schedule", noiseSchedule)
+            .put("steps", ServicesPrefs.imageSteps(context).coerceAtMost(50))
             .put("n_samples", 1)
+            // NAI handholding for prompts
             .put("ucPreset", 0)
             .put("qualityToggle", false)
             .put("add_original_image", false)
             .put("controlnet_strength", 1)
             .put("deliberate_euler_ancestral_bug", false)
+            // 官方 dynamic_thresholding = decrisper ?? false
             .put("dynamic_thresholding", false)
             .put("legacy", false)
             .put("legacy_v3_extend", false)
+            // 官方 sm/sm_dyn = novel_sm/novel_sm_dyn ?? false（ddim/v4 模型强制 false）
             .put("sm", false)
             .put("sm_dyn", false)
             .put("uncond_scale", 1)
+            // 官方 variety_boost ? calculateSkipCfgAboveSigma(w,h,model) : null
             .put("skip_cfg_above_sigma", JSONObject.NULL)
             .put("use_coords", false)
             .put("characterPrompts", JSONArray())
             .put("reference_image_multiple", JSONArray())
             .put("reference_information_extracted_multiple", JSONArray())
             .put("reference_strength_multiple", JSONArray())
-            .put("v4_negative_prompt", JSONObject().put("caption", JSONObject().put("base_caption", "").put("char_captions", JSONArray())))
-            .put("v4_prompt", JSONObject().put("caption", JSONObject().put("base_caption", prompt).put("char_captions", JSONArray())))
-            .put("use_order", true)
+            .put(
+                "v4_negative_prompt",
+                JSONObject().put(
+                    "caption",
+                    JSONObject().put("base_caption", negativePrompt).put("char_captions", JSONArray()),
+                ),
+            )
+            // 官方 use_coords/use_order 在 v4_prompt 内部（L375-377），非 parameters 顶层
+            .put(
+                "v4_prompt",
+                JSONObject()
+                    .put("caption", JSONObject().put("base_caption", prompt).put("char_captions", JSONArray()))
+                    .put("use_coords", false)
+                    .put("use_order", true),
+            )
         val payload = JSONObject()
             .put("action", "generate")
             .put("input", prompt)
@@ -205,32 +370,41 @@ class ImageGenClient {
     }
 
     /**
-     * Stable Horde：官方 src/endpoints/horde.js generate-image 1:1——
-     * 截断(5000-neg-5) + sanitizeHordeImagePrompt + POST /api/v2/generate/async，
-     * 轮询 /check/{id} 至 done，/status/{id} 取 generations[0].img（base64 webp）。
-     * 默认参数对齐官方：cfg_scale=7、512x512、karras=true、sampler=k_euler_a、nsfw=false。
+     * Stable Horde：官方客户端 generateHordeImage（index.js L3757-L3778）+ 服务端 horde.js
+     * /generate-image（L309-L400）合并 1:1——截断(5000-neg-5) + sanitizeHordeImagePrompt +
+     * POST /api/v2/generate/async，轮询 /check/{id}（3000ms×200）至 done，/status/{id} 取图。
+     * 参数全读 ServicesPrefs（官方读 extension_settings.sd.*）：sampler/scale/steps（原样不截断）/
+     * width/height/enable_hr→hires_fix/restore_faces→use_gfpgan/clip_skip；seed 仅 sd_seed>=0 时
+     * 发字符串，否则省略由 Horde 随机。
+     * 官方怪点：generateHordeImage 不发 karras 字段 → 服务端 Boolean(undefined)=false（非 defaultSettings
+     * 的 horde_karras:true，该键用于其他后端 L3543）。sanitize 恒开（horde_sanitize 默认 true）、
+     * nsfw=false（horde_nsfw 默认），App 无这两个开关 UI——登记 #16。model 原样发送无兜底。
      */
-    private fun horde(context: Context, prompt: String, model: String, apiKey: String, steps: Int): String? {
-        val negative = ""
-        val maxLength = 5000 - negative.length - 5
+    private fun horde(context: Context, prompt: String, negativePrompt: String, model: String, apiKey: String): String? {
+        val maxLength = 5000 - negativePrompt.length - 5
         val safePrompt = if (prompt.length > maxLength) prompt.substring(0, maxLength) else prompt
         val sanitized = sanitizeHordePrompt(safePrompt)
+        val params = JSONObject()
+            .put("sampler_name", ServicesPrefs.imageSampler(context))
+            .put("hires_fix", ServicesPrefs.imageEnableHr(context))
+            .put("use_gfpgan", ServicesPrefs.imageRestoreFaces(context))
+            .put("cfg_scale", ServicesPrefs.imageScale(context))
+            .put("steps", ServicesPrefs.imageSteps(context))
+            .put("width", ServicesPrefs.imageWidth(context))
+            .put("height", ServicesPrefs.imageHeight(context))
+            // 官方服务端 Boolean(request.body.karras)，而客户端从不发 karras → false
+            .put("karras", false)
+            .put("clip_skip", ServicesPrefs.imageClipSkip(context))
+        val seedPref = ServicesPrefs.imageSeed(context)
+        // 官方：seed >= 0 ? String(seed) : undefined（JSON.stringify 丢弃 undefined 键）
+        if (seedPref >= 0) params.put("seed", seedPref.toString())
+        params.put("n", 1)
         val payload = JSONObject()
-            .put("prompt", "$sanitized ### $negative")
-            .put("params", JSONObject()
-                .put("sampler_name", "k_euler_a")
-                .put("hires_fix", false)
-                .put("use_gfpgan", false)
-                .put("cfg_scale", 7)
-                .put("steps", steps.coerceIn(1, 50))
-                .put("width", 512)
-                .put("height", 512)
-                .put("karras", true)
-                .put("seed", kotlin.random.Random.nextLong(0, Long.MAX_VALUE).toString())
-                .put("n", 1))
+            .put("prompt", "$sanitized ### $negativePrompt")
+            .put("params", params)
             .put("r2", false)
             .put("nsfw", false)
-            .put("models", JSONArray().put(model.ifBlank { "Deliberate" }))
+            .put("models", JSONArray().put(model))
         val requestBuilder = Request.Builder()
             .url("https://stablehorde.net/api/v2/generate/async")
             .post(payload.toString().toRequestBody(jsonMedia))
