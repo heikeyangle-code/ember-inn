@@ -235,16 +235,42 @@ class ImageGenServicesDiffTest {
                     val workflow = args["workflow"]?.jsonPrimitive?.content ?: ""
                     val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
                     val neg = args["negativePrompt"]?.jsonPrimitive?.content ?: ""
-                    val seed = args["seed"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
-                    val model = args["model"]?.jsonPrimitive?.content ?: ""
-                    val steps = args["steps"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
-                    val scale = args["scale"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
-                    val width = args["width"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
-                    val height = args["height"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val seed = args.getValue("seed").jsonPrimitive.content.toLong()
+                    val denoiseEl = args["denoisingStrength"]
+                    val denoise = when (denoiseEl) {
+                        null, is JsonNull -> null
+                        else -> denoiseEl.jsonPrimitive.content.toDouble()
+                    }
+                    val clipSkipEl = args["clipSkip"]
+                    val clipSkip =
+                        if (clipSkipEl == null || clipSkipEl is JsonNull) Double.NaN
+                        else clipSkipEl.jsonPrimitive.content.toDouble()
+                    val str = { k: String -> args[k]?.jsonPrimitive?.contentOrNull ?: "" }
                     val actual = ImageGenRequestEngine.replaceComfyWorkflow(
-                        workflow, prompt, neg, seed, model, steps, scale, width, height,
+                        workflow = workflow,
+                        runPod = args["runPod"]?.jsonPrimitive?.content == "true",
+                        prompt = prompt,
+                        negativePrompt = neg,
+                        seed = seed,
+                        denoisingStrength = denoise,
+                        clipSkip = clipSkip,
+                        model = str("model"),
+                        vae = str("vae"),
+                        sampler = str("sampler"),
+                        scheduler = str("scheduler"),
+                        steps = str("steps").toIntOrNull() ?: 0,
+                        scale = str("scale").toDoubleOrNull() ?: 0.0,
+                        width = str("width").toIntOrNull() ?: 0,
+                        height = str("height").toIntOrNull() ?: 0,
                     )
-                    val expectedResult = expected.jsonObject["result"]?.jsonPrimitive?.content
+                    val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content
+                    assertEquals("case $id", expectedResult, actual)
+                }
+                "comfy-seed-resolve" -> {
+                    val seed = args.getValue("seed").jsonPrimitive.content.toLong()
+                    val random01 = args.getValue("random01").jsonPrimitive.content.toDouble()
+                    val actual = ImageGenRequestEngine.resolveComfySeed(seed, random01)
+                    val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content.toLong()
                     assertEquals("case $id", expectedResult, actual)
                 }
                 else -> error("unknown kind: $kind")

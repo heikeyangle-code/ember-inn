@@ -595,22 +595,37 @@ function workersAiClientBody(prompt, negativePrompt, model, width, height, steps
     return body;
 }
 
-// ---------- 官方 Comfy 占位符替换（generateComfyImageCommon L4231-L4261 纯函数核心段） ----------
-// 官方用 '"%xxx%"' 作占位符（含外引号），JSON.stringify(str) = '"str"' → 替换后得到 "str"。
-// 为对齐 App 模板简化写法（%xxx% 无外引号），这里用 '%xxx%' 当占位符：
-//   JSON.stringify(str) = '"str"' 替换 "%prompt%" → 得到 "str"，与官方最终效果一致。
-function replaceComfyWorkflow(workflow, prompt, negativePrompt, seed, model, steps, scale, width, height) {
-    const jsonStr = x => JSON.stringify(x);
-    const modelVal = model || 'v1-5-pruned-emaonly.safetensors';
-    return workflow
-        .replaceAll('%prompt%', jsonStr(prompt))
-        .replaceAll('%negative_prompt%', jsonStr(negativePrompt))
-        .replaceAll('%seed%', jsonStr(seed))
-        .replaceAll('%steps%', String(steps))
-        .replaceAll('%scale%', String(scale))
-        .replaceAll('%width%', String(width))
-        .replaceAll('%height%', String(height))
-        .replaceAll('%model%', jsonStr(modelVal));
+// ---------- 官方 Comfy 占位符替换（index.js generateComfyImageCommon L4231-L4261 逐字摘） ----------
+// 搜索串全部含外层双引号 '"%xxx%"'，替换值 = JSON.stringify(...)：
+//   字符串 → "…（转义）"；整值数字无小数点（JSON.stringify(7)="7"、JSON.stringify(0.7)="0.7"）。
+// seed/denoise/clip_skip 三行官方为内联表达式，此处拆成等价纯函数：
+//   - resolveComfySeed：L4235 `settings.seed >= 0 ? settings.seed : Math.round(Math.random()*MAX_SAFE)`
+//     （Math.random 注入为 random01 参数以便差分确定性；App 运行时传真随机）
+//   - denoise：L4238 `denoising_strength === undefined ? 1.0 : 值`
+//   - clip_skip：L4240 `isNaN(clip_skip) ? -1 : -clip_skip`
+function resolveComfySeed(seedSetting, random01) {
+    return seedSetting >= 0 ? seedSetting : Math.round(random01 * Number.MAX_SAFE_INTEGER);
+}
+
+// placeholders 即官方 generateComfyImage（L4304-L4313）/ generateComfyRunPodImage（L4326-L4331）
+// 的两份列表；settings 模拟 extension_settings.sd 的对应键。
+// 不差分（登记）：comfy_placeholders 自定义替换（官方默认 []，App 无该 UI）、
+//   %user_avatar%/%char_avatar%（需 fetch 头像转 base64，接线层行为）。
+function replaceComfyWorkflow(workflow, seed, denoisingStrength, clipSkip, settings, placeholders, prompt, negativePrompt) {
+    let w = workflow.replaceAll('"%prompt%"', JSON.stringify(prompt));
+    w = w.replaceAll('"%negative_prompt%"', JSON.stringify(negativePrompt));
+    w = w.replaceAll('"%seed%"', JSON.stringify(seed));
+
+    const denoiseVal = denoisingStrength === undefined ? 1.0 : denoisingStrength;
+    w = w.replaceAll('"%denoise%"', JSON.stringify(denoiseVal));
+
+    const clipSkipVal = isNaN(clipSkip) ? -1 : -clipSkip;
+    w = w.replaceAll('"%clip_skip%"', JSON.stringify(clipSkipVal));
+
+    placeholders.forEach(ph => {
+        w = w.replaceAll(`"%${ph}%"`, JSON.stringify(settings[ph]));
+    });
+    return w;
 }
 
 // ---------- 官方 Extras body 构造（index.js generateExtrasImage L3524-L3550 逐字摘） ----------
@@ -723,26 +738,71 @@ add('workersai-client-no-seed', 'workersai-client',
     workersAiClientBody('x', '', 'stable-diffusion-xl-base-1.0', 768, 1024, 20, 7.0, -1, 'myacct'));
 
 // ============ Comfy replaceComfyWorkflow cases ============
-// 占位符语法：官方为 '"%xxx%"'（含周围双引号），Kotlin 简化模板用 '%xxx%'（无额外引号）。
-// 语义对齐：JSON.stringify(str) = '"值"' 拼到模板 "%prompt%" → 最终替换结果一致。
-const TMPL_SIMPLE = '{"prompt":%prompt%,"neg":%negative_prompt%,"seed":%seed%,"steps":%steps%,"scale":%scale%,"width":%width%,"height":%height%,"model":%model%}';
-add('comfy-replace-simple', 'comfy-replace',
-    { workflow: TMPL_SIMPLE, prompt: 'a cat', negativePrompt: 'blurry', seed: 42,
-      model: 'v1-5.safetensors', steps: 20, scale: 7, width: 512, height: 512 },
-    { result: replaceComfyWorkflow(TMPL_SIMPLE, 'a cat', 'blurry', 42,
-        'v1-5.safetensors', 20, 7, 512, 512) });
-add('comfy-replace-empty-model-default', 'comfy-replace',
-    // model 空字符串 → 'v1-5-pruned-emaonly.safetensors'；seed 数字打桩
-    { workflow: TMPL_SIMPLE, prompt: 'hello', negativePrompt: '', seed: 1000,
-      model: '', steps: 10, scale: 10, width: 1024, height: 768 },
-    { result: replaceComfyWorkflow(TMPL_SIMPLE, 'hello', '', 1000,
-        '', 10, 10, 1024, 768) });
+// 官方占位符搜索串含外层双引号；模板模拟真实 ComfyUI workflow 的 "键": "%xxx%" 形态。
+// seed/denoisingStrength/clipSkip 为调用方已解析值（resolveComfySeed / undefined→1.0 / isNaN→-1 在函数内）。
+const TMPL_FULL = '{"3":{"inputs":{"seed":"%seed%","steps":"%steps%","cfg":"%scale%","sampler_name":"%sampler%","scheduler":"%scheduler%","denoise":"%denoise%"},"class_type":"KSampler"},"4":{"inputs":{"ckpt_name":"%model%","vae":"%vae%"},"class_type":"CheckpointLoader"},"5":{"inputs":{"width":"%width%","height":"%height%","text":"%prompt%","negative":"%negative_prompt%","clip_skip":"%clip_skip%"},"class_type":"EmptyLatent"}}';
+const COMFY_SETTINGS_DEFAULTS = {
+    model: '', vae: '', sampler: 'DDIM', scheduler: 'normal',
+    steps: 20, scale: 7, width: 512, height: 512,
+};
+const PH_COMFY = ['model', 'vae', 'sampler', 'scheduler', 'steps', 'scale', 'width', 'height'];
+const PH_RUNPOD = ['steps', 'scale', 'width', 'height'];
+
+add('comfy-replace-full-defaults', 'comfy-replace',
+    // 官方默认设置全量替换（denoise 默认 0.7、clip_skip 1 → -1）
+    { workflow: TMPL_FULL, prompt: 'a cat', negativePrompt: 'blurry',
+      seed: String(resolveComfySeed(42, 0.5)), denoisingStrength: 0.7, clipSkip: 1,
+      settings: COMFY_SETTINGS_DEFAULTS, runPod: false },
+    { result: replaceComfyWorkflow(TMPL_FULL, resolveComfySeed(42, 0.5), 0.7, 1,
+        COMFY_SETTINGS_DEFAULTS, PH_COMFY, 'a cat', 'blurry') });
+add('comfy-replace-fractional-and-negative-clipskip', 'comfy-replace',
+    // scale 7.5/denoise 0.65 带小数原样（无 .0）；clip_skip 12 → -12 取负
+    { workflow: TMPL_FULL, prompt: 'portrait', negativePrompt: '',
+      seed: String(777), denoisingStrength: 0.65, clipSkip: 12,
+      settings: { ...COMFY_SETTINGS_DEFAULTS, scale: 7.5, sampler: 'euler' }, runPod: false },
+    { result: replaceComfyWorkflow(TMPL_FULL, 777, 0.65, 12,
+        { ...COMFY_SETTINGS_DEFAULTS, scale: 7.5, sampler: 'euler' }, PH_COMFY, 'portrait', '') });
 add('comfy-replace-quote-escape', 'comfy-replace',
-    // prompt 含引号需 JSON.stringify 转义
-    { workflow: TMPL_SIMPLE, prompt: 'say "hi"', negativePrompt: "don't", seed: 0,
-      model: 'flux.safetensors', steps: 1, scale: 1, width: 64, height: 64 },
-    { result: replaceComfyWorkflow(TMPL_SIMPLE, 'say "hi"', "don't", 0,
-        'flux.safetensors', 1, 1, 64, 64) });
+    // prompt 含双引号 → JSON.stringify 转义 \"；单引号不转义
+    { workflow: TMPL_FULL, prompt: 'say "hi" \\ ok', negativePrompt: "don't",
+      seed: String(0), denoisingStrength: 1, clipSkip: NaN,
+      settings: { ...COMFY_SETTINGS_DEFAULTS, model: 'flux.safetensors', steps: 1, width: 64, height: 64 },
+      runPod: false },
+    { result: replaceComfyWorkflow(TMPL_FULL, 0, 1, NaN,
+        { ...COMFY_SETTINGS_DEFAULTS, model: 'flux.safetensors', steps: 1, width: 64, height: 64 },
+        PH_COMFY, 'say "hi" \\ ok', "don't") });
+add('comfy-replace-runpod-subset', 'comfy-replace',
+    // runpod placeholders 仅 4 项：%model%/%vae%/%sampler%/%scheduler% 保持原样
+    { workflow: TMPL_FULL, prompt: 'rp', negativePrompt: 'ng',
+      seed: String(5), denoisingStrength: 0.7, clipSkip: 1,
+      settings: { ...COMFY_SETTINGS_DEFAULTS, steps: 30, scale: 6.5 }, runPod: true },
+    { result: replaceComfyWorkflow(TMPL_FULL, 5, 0.7, 1,
+        { ...COMFY_SETTINGS_DEFAULTS, steps: 30, scale: 6.5 }, PH_RUNPOD, 'rp', 'ng') });
+add('comfy-replace-repeated-occurrence', 'comfy-replace',
+    // 同一占位符出现两次全部替换（replaceAll 全局语义）
+    { workflow: '"%prompt%" and "%prompt%" cfg "%scale%" scale "%scale%"', prompt: 'dup', negativePrompt: '',
+      seed: String(9), denoisingStrength: 0.8, clipSkip: 2,
+      settings: { ...COMFY_SETTINGS_DEFAULTS, scale: 4 }, runPod: false },
+    { result: replaceComfyWorkflow('"%prompt%" and "%prompt%" cfg "%scale%" scale "%scale%"', 9, 0.8, 2,
+        { ...COMFY_SETTINGS_DEFAULTS, scale: 4 }, PH_COMFY, 'dup', '') });
+
+// ============ Comfy resolveComfySeed cases ============
+// 官方 L4235：settings.seed >= 0 ? seed : Math.round(random01 * Number.MAX_SAFE_INTEGER)
+add('comfy-seed-nonnegative-passthrough', 'comfy-seed-resolve',
+    // seed>=0 原样返回，random 不参与
+    { seed: String(42), random01: '0.9999' },
+    { result: String(resolveComfySeed(42, 0.9999)) });
+add('comfy-seed-random-half', 'comfy-seed-resolve',
+    // -1 → Math.round(0.5 * 9007199254740991) = 4503599627370496（半值向上，JS/Java 一致）
+    { seed: String(-1), random01: '0.5' },
+    { result: String(resolveComfySeed(-1, 0.5)) });
+add('comfy-seed-random-zero', 'comfy-seed-resolve',
+    { seed: String(-5), random01: '0' },
+    { result: String(resolveComfySeed(-5, 0)) });
+add('comfy-seed-random-one-max-safe', 'comfy-seed-resolve',
+    // random01=1 → Number.MAX_SAFE_INTEGER 本身
+    { seed: String(-1), random01: '1' },
+    { result: String(resolveComfySeed(-1, 1)) });
 
 writeFileSync(outFile, JSON.stringify({ cases }, null, 2) + '\n');
 console.log(`imagegen-services fixtures: ${cases.length} cases -> ${outFile}`);

@@ -350,9 +350,12 @@ object ImageGenBackendsLlm {
 
     // --------------------------------------------------------- ComfyRunPod
     /**
-     * ComfyUI on RunPod：占位符替换由 [ImageGenRequestEngine.replaceComfyWorkflow] 1:1 实现
-     * （差分 3 例，纯函数）；App 接线：POST RunPod /run {input:{workflow:<replaced>}}，
-     * 轮询 /status/{id} 至 COMPLETED 取 output 落盘。
+     * ComfyUI on RunPod：占位符替换由 [ImageGenRequestEngine.replaceComfyWorkflow]（runPod=true，
+     * 仅 steps/scale/width/height 4 项，官方 generateComfyRunPodImage L4326-L4331）+ seed 解析
+     * [ImageGenRequestEngine.resolveComfySeed] 1:1 实现（差分 comfy-replace/comfy-seed-resolve）。
+     * App 接线对齐官方服务端 comfyRunPod.post('/generate')（src/endpoints/stable-diffusion.js L667-720）：
+     * workflow.input.workflow 存在则原样否则包 {input:{workflow}}；POST /run Bearer key；
+     * 轮询 /status/{id}（官方 500ms 无上限依赖中断，App 上限 2400 次 ≈20 分钟防悬挂）。
      */
     suspend fun generateComfyRunPodImage(
         context: Context,
@@ -366,18 +369,31 @@ object ImageGenBackendsLlm {
             if (apiKey.isBlank() || endpointId.isBlank() || workflow.isBlank()) return@runCatching null
             val replaced = ImageGenRequestEngine.replaceComfyWorkflow(
                 workflow = workflow,
+                runPod = true,
                 prompt = prompt,
                 negativePrompt = negativePrompt,
-                randomSeed = kotlin.random.Random.nextLong(0, Long.MAX_VALUE),
+                seed = ImageGenRequestEngine.resolveComfySeed(
+                    ServicesPrefs.imageSeed(context),
+                    kotlin.random.Random.nextDouble(),
+                ),
+                denoisingStrength = ServicesPrefs.imageDenoisingStrength(context),
+                clipSkip = ServicesPrefs.imageClipSkip(context).toDouble(),
                 model = ServicesPrefs.imageModel(context),
+                vae = ServicesPrefs.imageVae(context),
+                sampler = ServicesPrefs.imageSampler(context),
+                scheduler = ServicesPrefs.imageScheduler(context),
                 steps = ServicesPrefs.imageSteps(context),
-                scale = ServicesPrefs.imageScale(context).toInt(),
+                scale = ServicesPrefs.imageScale(context),
                 width = ServicesPrefs.imageWidth(context),
                 height = ServicesPrefs.imageHeight(context),
             )
             val workflowObj = runCatching { JSONObject(replaced) }.getOrNull()
                 ?: return@runCatching null
-            val payload = JSONObject().put("input", JSONObject().put("workflow", workflowObj)).toString()
+            // 官方服务端 L684-685：workflow.input.workflow 存在则原样，否则包一层 {input:{workflow}}
+            val wrapped =
+                if (workflowObj.optJSONObject("input")?.has("workflow") == true) workflowObj
+                else JSONObject().put("input", JSONObject().put("workflow", workflowObj))
+            val payload = wrapped.toString()
             val base = "https://api.runpod.ai/v2/$endpointId"
             val submit = Request.Builder()
                 .url("$base/run")
@@ -390,8 +406,9 @@ object ImageGenBackendsLlm {
             val id = submitResp?.optString("id")?.takeIf { it.isNotBlank() } ?: return@runCatching null
             var output: Any? = null
             var finished = false
-            for (i in 0 until 120) {
-                Thread.sleep(2000)
+            // 官方 500ms 间隔（L702）；官方无上限依赖客户端中断，App 设 2400 次 ≈20 分钟防悬挂
+            for (i in 0 until 2400) {
+                Thread.sleep(500)
                 val statusReq = Request.Builder().url("$base/status/$id").get()
                     .header("Authorization", "Bearer $apiKey").build()
                 val statusBody: JSONObject? = client.newCall(statusReq).execute().use { resp ->

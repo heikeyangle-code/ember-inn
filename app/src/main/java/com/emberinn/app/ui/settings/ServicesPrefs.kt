@@ -42,8 +42,9 @@ object ServicesPrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_deepl_endpoint", "free") ?: "free"
 
     // 图像
+    /** 官方 defaultSettings.source = sources.extras（stable-diffusion/index.js L234）。 */
     fun imageSource(context: Context): String =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_source", "auto") ?: "auto"
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_source", "extras") ?: "extras"
 
     fun imageUrl(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_url", "") ?: ""
@@ -51,8 +52,9 @@ object ServicesPrefs {
     fun imageModel(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_model", "") ?: ""
 
+    /** 官方 defaultSettings.steps = 20（stable-diffusion/index.js L246；settings.html 滑条 min1 max150）。 */
     fun imageSteps(context: Context): Int =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("sd_steps", 30)
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("sd_steps", 20)
 
     fun imageApiKey(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_api_key", "") ?: ""

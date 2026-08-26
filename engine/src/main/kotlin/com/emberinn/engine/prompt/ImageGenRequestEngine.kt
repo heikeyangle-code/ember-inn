@@ -521,42 +521,74 @@ object ImageGenRequestEngine {
     }
 
     /**
-     * 官方 Comfy replaceComfyWorkflow 纯函数（对齐 generateComfyImageCommon 占位符替换核心段，
-     * index.js L4231-L4261 逐字摘简化版）：
-     *   workflow
-     *     .replaceAll('"%prompt%"', JSON.stringify(prompt))
-     *     .replaceAll('"%negative_prompt%"', JSON.stringify(negativePrompt))
-     *     .replaceAll('"%seed%"', JSON.stringify(seed))
-     *     .replaceAll('"%steps%"', String(steps))
-     *     .replaceAll('"%scale%"', String(scale))
-     *     .replaceAll('"%width%"', String(width))
-     *     .replaceAll('"%height%"', String(height))
-     *     .replaceAll('"%model%"', JSON.stringify(model))
-     * JSON.stringify(x) 对字符串输出 "含转义的引号包值"：JSON.stringify("hello") = '"hello"'
-     *   → Kotlin 等价 JSONObject().put("v",x).toString() 去掉外层 {"v": }
-     * seed < 0 用 randomSeed 模拟（差分打桩为常量）。
+     * 官方 Comfy 占位符替换纯函数（generateComfyImageCommon index.js L4231-L4261 逐字对齐）。
+     * 搜索串全部含外层双引号 '"%xxx%"'，替换值 = JSON.stringify 产物：
+     * 字符串 → "…（引号转义）"；整值数字无小数点（JSON.stringify(7)="7"、JSON.stringify(0.7)="0.7"）。
      *
-     * 注：官方还有 %denoise%/%clip_skip% 等，但 comfy_runpod 的 placeholders = [steps,scale,width,height]
-     * （官方 generateComfyRunPodImage L4326-L4329），所以此处仅覆盖这 8 个占位符。
+     * [seed] 为已解析值：官方 L4235 内联 `settings.seed >= 0 ? seed : Math.round(Math.random()*MAX_SAFE)`，
+     * 见 [resolveComfySeed]；[denoisingStrength] null 模拟官方 undefined → 1.0；
+     * [clipSkip] NaN 模拟官方 isNaN → -1，否则取负（12 → -12）。
+     *
+     * 占位符组两份列表（官方 generateComfyImage L4304-L4313 / generateComfyRunPodImage L4326-L4331）：
+     * standard 含 model/vae/sampler/scheduler，runPod 仅 steps/scale/width/height。
+     * 官方另有 comfy_placeholders 自定义替换与 %user_avatar%/%char_avatar%（需头像 fetch），
+     * App 未提供自定义占位符 UI、头像注入未接——登记偏差。
      */
     fun replaceComfyWorkflow(
         workflow: String,
-        prompt: String, negativePrompt: String, randomSeed: Long,
-        model: String, steps: Int, scale: Int, width: Int, height: Int,
+        runPod: Boolean,
+        prompt: String,
+        negativePrompt: String,
+        seed: Long,
+        denoisingStrength: Double?,
+        clipSkip: Double,
+        model: String,
+        vae: String,
+        sampler: String,
+        scheduler: String,
+        steps: Int,
+        scale: Double,
+        width: Int,
+        height: Int,
     ): String {
-        val jsonStr = { s: String -> buildJsonObject { put("v", JsonPrimitive(s)) }.toString()
+        val jsStr = { s: String -> buildJsonObject { put("v", JsonPrimitive(s)) }.toString()
             .removePrefix("{\"v\":").removeSuffix("}") }
-        val modelVal = model.ifBlank { "v1-5-pruned-emaonly.safetensors" }
-        return workflow
-            .replace("%prompt%", jsonStr(prompt))
-            .replace("%negative_prompt%", jsonStr(negativePrompt))
-            .replace("%seed%", randomSeed.toString())
-            .replace("%model%", jsonStr(modelVal))
-            .replace("%steps%", steps.toString())
-            .replace("%scale%", scale.toString())
-            .replace("%width%", width.toString())
-            .replace("%height%", height.toString())
+        var w = workflow
+            .replace("\"%prompt%\"", jsStr(prompt))
+            .replace("\"%negative_prompt%\"", jsStr(negativePrompt))
+            .replace("\"%seed%\"", seed.toString())
+            // 官方 L4238：denoising_strength === undefined ? 1.0 : 值
+            .replace("\"%denoise%\"", jsNumStr(denoisingStrength ?: 1.0))
+            // 官方 L4240：isNaN(clip_skip) ? -1 : -clip_skip
+            .replace("\"%clip_skip%\"", jsNumStr(if (clipSkip.isNaN()) -1.0 else -clipSkip))
+        val placeholders = if (runPod) {
+            listOf("steps", "scale", "width", "height")
+        } else {
+            listOf("model", "vae", "sampler", "scheduler", "steps", "scale", "width", "height")
+        }
+        for (ph in placeholders) {
+            val value = when (ph) {
+                "steps" -> steps.toString()
+                "scale" -> jsNumStr(scale)
+                "width" -> width.toString()
+                "height" -> height.toString()
+                "model" -> jsStr(model)
+                "vae" -> jsStr(vae)
+                "sampler" -> jsStr(sampler)
+                else -> jsStr(scheduler)
+            }
+            w = w.replace("\"%$ph%\"", value)
+        }
+        return w
     }
+
+    /**
+     * 官方 Comfy seed 解析（generateComfyImageCommon L4235 内联式拆出）：
+     * settings.seed >= 0 原样；否则 Math.round(random01 * Number.MAX_SAFE_INTEGER)。
+     * [random01] 由调用方注入（官方为 Math.random()），差分打桩确定值。
+     */
+    fun resolveComfySeed(seed: Long, random01: Double): Long =
+        if (seed >= 0) seed else Math.round(random01 * 9007199254740991.0)
 
     // ---------- helpers ----------
 

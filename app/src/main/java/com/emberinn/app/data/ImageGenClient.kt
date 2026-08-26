@@ -55,7 +55,7 @@ class ImageGenClient {
                 "comfy" -> if (ServicesPrefs.comfyType(context) == "runpod_serverless") {
                     ImageGenBackendsLlm.generate(context, "comfy_runpod", fullPrompt, fullNegative)
                 } else {
-                    comfy(context, url, fullPrompt, fullNegative, model, steps)
+                    comfy(context, url, fullPrompt, fullNegative)
                 }
                 "togetherai", "pollinations", "stability", "aimlapi", "chutes",
                 "electronhub", "nanogpt", "bfl", "xai" ->
@@ -263,38 +263,48 @@ class ImageGenClient {
     }
 
     /**
-     * ComfyUI：官方 src/endpoints/stable-diffusion.js comfy.generate 1:1——
-     * POST {url}/prompt（workflow JSON 字符串，含 %prompt%/%model%/%steps%/%width% 等占位符），
-     * 轮询 /history 至 prompt_id 出现，取 outputs 第一张图，GET /view 下载。
-     * workflow 取 [ComfyWorkflowStore] 活动项（多 workflow 管理，含内嵌官方默认）。
+     * ComfyUI 直连（官方客户端 generateComfyImageCommon stable-diffusion/index.js L4219-4300 +
+     * 服务端 comfy.post('/generate') src/endpoints/stable-diffusion.js L562-630 1:1）：
+     * - 占位符替换走 [ImageGenRequestEngine.replaceComfyWorkflow]（standard 全 8 项），seed 解析走
+     *   [ImageGenRequestEngine.resolveComfySeed]（sd_seed>=0 原样否则随机）；参数全读 ServicesPrefs
+     *   （官方读 extension_settings.sd.*）。
+     * - 提交 POST {url}/prompt，body 为官方客户端模板字符串原样（index.js L4283-4286；
+     *   ST 服务端把 request.body.prompt 不加改动转发给 ComfyUI /prompt）。
+     * - 轮询 GET {url}/history（官方 100ms 无上限依赖中断；App 上限 6000 次 ≈10 分钟）至
+     *   history[prompt_id] 出现；status.status_str=='error' 判失败。
+     * - outputs 各节点 images 平铺第一张优先，整体没有再取 gifs 平铺第一张（官方 L616-617）；
+     *   GET /view 下载，query 官方直接插值不做 URL 编码；扩展名 extname || 'png'。
      */
-    private fun comfy(context: Context, url: String, prompt: String, negativePrompt: String, model: String, steps: Int): String? {
+    private fun comfy(context: Context, url: String, prompt: String, negativePrompt: String): String? {
         if (url.isBlank()) return null
         val workflow = ComfyWorkflowStore(context).activeWorkflowJson()
         if (workflow.isBlank()) return null
-        val seed = kotlin.random.Random.nextLong(0, Long.MAX_VALUE).toString()
-        var replaced = workflow
-        val replacements = mapOf(
-            "%prompt%" to JSONObject().put("v", prompt).toString().removePrefix("{\"v\":").removeSuffix("}"),
-            "%negative_prompt%" to JSONObject().put("v", negativePrompt).toString().removePrefix("{\"v\":").removeSuffix("}"),
-            "%seed%" to "\"$seed\"",
-            "%denoise%" to "1.0",
-            "%clip_skip%" to "-1",
-            "%model%" to JSONObject().put("v", model.ifBlank { "v1-5-pruned-emaonly.safetensors" }).toString().removePrefix("{\"v\":").removeSuffix("}"),
-            "%vae%" to "\"\"",
-            "%sampler%" to "\"euler\"",
-            "%scheduler%" to "\"normal\"",
-            "%steps%" to steps.toString(),
-            "%scale%" to "7",
-            "%width%" to "512",
-            "%height%" to "512",
+        val replaced = ImageGenRequestEngine.replaceComfyWorkflow(
+            workflow = workflow,
+            runPod = false,
+            prompt = prompt,
+            negativePrompt = negativePrompt,
+            seed = ImageGenRequestEngine.resolveComfySeed(
+                ServicesPrefs.imageSeed(context),
+                kotlin.random.Random.nextDouble(),
+            ),
+            denoisingStrength = ServicesPrefs.imageDenoisingStrength(context),
+            clipSkip = ServicesPrefs.imageClipSkip(context).toDouble(),
+            model = ServicesPrefs.imageModel(context),
+            vae = ServicesPrefs.imageVae(context),
+            sampler = ServicesPrefs.imageSampler(context),
+            scheduler = ServicesPrefs.imageScheduler(context),
+            steps = ServicesPrefs.imageSteps(context),
+            scale = ServicesPrefs.imageScale(context),
+            width = ServicesPrefs.imageWidth(context),
+            height = ServicesPrefs.imageHeight(context),
         )
-        for ((k, v) in replacements) replaced = replaced.replace(k, v)
 
-        // 1) 提交 prompt
+        // 官方模板字符串原样（index.js L4283-4286）：换行与缩进都保留在线上字节里
+        val submitBody = "{\n                \"prompt\": $replaced\n            }"
         val submit = Request.Builder()
             .url(url.trimEnd('/') + "/prompt")
-            .post(replaced.toRequestBody(jsonMedia))
+            .post(submitBody.toRequestBody(jsonMedia))
             .build()
         val id = client.newCall(submit).execute().use { resp ->
             if (!resp.isSuccessful) return null
@@ -317,22 +327,21 @@ class ImageGenClient {
         val item = history?.optJSONObject(id) ?: return null
         if (item.optJSONObject("status")?.optString("status_str") == "error") return null
         val outputs = item.optJSONObject("outputs") ?: return null
-        val keys = outputs.keys()
-        var imgInfo: JSONObject? = null
-        while (keys.hasNext()) {
-            val out = outputs.optJSONObject(keys.next()) ?: continue
-            val images = out.optJSONArray("images") ?: out.optJSONArray("gifs") ?: continue
-            if (images.length() > 0) { imgInfo = images.optJSONObject(0); break }
-        }
-        val info = imgInfo ?: return null
+        // 官方 L616-617：images 平铺第一张优先；一张都没有才取 gifs 平铺第一张
+        val nodes = mutableListOf<JSONObject>()
+        outputs.keys().forEach { key -> outputs.optJSONObject(key)?.let(nodes::add) }
+        val info = nodes.mapNotNull { it.optJSONArray("images") }
+            .firstOrNull { it.length() > 0 }?.optJSONObject(0)
+            ?: nodes.mapNotNull { it.optJSONArray("gifs") }
+                .firstOrNull { it.length() > 0 }?.optJSONObject(0)
+            ?: return null
         val filename = info.optString("filename")
         val subfolder = info.optString("subfolder")
         val type = info.optString("type")
         val ext = filename.substringAfterLast('.', "png").lowercase()
 
-        // 3) 下载图片
-        val viewUrl = url.trimEnd('/') + "/view?filename=${java.net.URLEncoder.encode(filename, "UTF-8")}" +
-            "&subfolder=${java.net.URLEncoder.encode(subfolder, "UTF-8")}&type=${java.net.URLEncoder.encode(type, "UTF-8")}"
+        // 3) 下载图片（官方 query 直接字符串插值，不做 URL 编码）
+        val viewUrl = url.trimEnd('/') + "/view?filename=$filename&subfolder=$subfolder&type=$type"
         val bytes = client.newCall(Request.Builder().url(viewUrl).get().build()).execute().use { resp ->
             if (!resp.isSuccessful) return@use null
             resp.body?.bytes()
