@@ -494,6 +494,16 @@ private fun ImageCard() {
                     DropdownOption("runpod_serverless", "RunPod Serverless Endpoint"),
                 ),
             ) { comfyType = it; ServicesPrefs.saveComfyType(context, it) }
+            if (comfyType == "runpod_serverless") {
+                // 官方 #sd_runpod_key（manage api_key_comfy_runpod）：RunPod 密钥，Bearer 调 /run /health
+                KeyRow(
+                    value = apiKey,
+                    visible = keyVisible,
+                    onVisibleChange = { keyVisible = it },
+                    onValueChange = { apiKey = it; ServicesPrefs.saveImageApiKey(context, it) },
+                    label = "RunPod API Key",
+                )
+            }
             if (comfyType == "standard") {
                 ComfyWorkflowSection()
             }
@@ -663,7 +673,19 @@ private fun ImageCard() {
             }
         }
         if (source == "google") {
-            // 官方 google 区（settings.html L403-L417）：enhance 默认开；duration 属 Veo 视频分支（未接）
+            // 官方 google 区（settings.html L393-L417）：API Type 下拉 + enhance 默认开；
+            // duration 属 Veo 视频分支（未接，登记偏差）
+            var googleApi by rememberSaveable { mutableStateOf(ServicesPrefs.googleApi(context)) }
+            MenuPicker(
+                "API 类型（sd_google_api）",
+                if (googleApi == "vertexai") "Google Vertex AI" else "Google AI Studio",
+                listOf(
+                    DropdownOption("makersuite", "Google AI Studio"),
+                    DropdownOption("vertexai", "Google Vertex AI"),
+                ),
+            ) {
+                googleApi = it; ServicesPrefs.saveImageString(context, "sd_google_api", it)
+            }
             ToggleRow("Enhance（LLM 提示词增强）", googleEnhance) {
                 googleEnhance = it; ServicesPrefs.saveImageModeToggle(context, "sd_google_enhance", it)
             }
@@ -690,7 +712,8 @@ private fun ImageCard() {
                 }
             }
         }
-        if (source == "google") {
+        if (source == "pollinations") {
+            // 官方 pollinations 区：enhance 开关（settings.html #sd_pollinations_enhance）
             ToggleRow("Enhance（LLM 提示词增强）", pollinationsEnhance) {
                 pollinationsEnhance = it; ServicesPrefs.saveImageModeToggle(context, "sd_pollinations_enhance", it)
             }

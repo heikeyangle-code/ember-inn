@@ -756,8 +756,8 @@ object ImageGenRequestEngine {
         val targetAspect = width.toDouble() / height
         val targetResolution = width.toDouble() * height
         for ((id, r) in RESOLUTION_OPTIONS) {
-            val aspectDiff = Math.abs(r.width.toDouble() / r.height - targetAspect) / targetAspect
-            val resolutionDiff = Math.abs((r.width.toDouble() * r.height) - targetResolution) / targetResolution
+            val aspectDiff = Math.abs(r.first.toDouble() / r.second - targetAspect) / targetAspect
+            val resolutionDiff = Math.abs((r.first.toDouble() * r.second) - targetResolution) / targetResolution
             val totalDiff = aspectDiff + resolutionDiff
             if (totalDiff < minTotalDiff) {
                 minTotalDiff = totalDiff
@@ -806,7 +806,9 @@ object ImageGenRequestEngine {
                 val ratio = Math.sqrt(prevPixelCountBase.toDouble() / newPixelCount)
                 h = Math.round(h * ratio / 64).toInt() * 64
                 w = Math.round(w * ratio / 64).toInt() * 64
-                resolutionOptionMap[getClosestKnownResolution(w, h)]?.let { r ->
+                val resId = getClosestKnownResolution(w, h)
+                val snapped = resId?.let { resolutionOptionMap[it] }
+                snapped?.let { r ->
                     h = r.second
                     w = r.first
                 }
