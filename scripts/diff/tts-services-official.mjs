@@ -350,6 +350,14 @@ add('volcengine-defaults', 'volcengine',
 add('volcengine-unicode', 'volcengine',
     { settings: { provider_endpoint: 'https://x.com', resource_id: 'rid', speed: 0.8 }, text: '你好', voiceSpeaker: 'saturn_zh_female_keainvsheng_tob' },
     volcengineRequest({ provider_endpoint: 'https://x.com', resource_id: 'rid', speed: 0.8 }, '你好', 'saturn_zh_female_keainvsheng_tob'));
+add('volcengine-speed-zero-passthrough', 'volcengine',
+    // 官方 settings.speed 默认 0 原样透传（服务端 parseInt(speed || '0')）
+    { settings: { provider_endpoint: 'https://x.com', resource_id: 'rid', speed: 0 }, text: 'x', voiceSpeaker: 'v' },
+    volcengineRequest({ provider_endpoint: 'https://x.com', resource_id: 'rid', speed: 0 }, 'x', 'v'));
+add('volcengine-speed-missing-dropped', 'volcengine',
+    // 键缺失 → JS undefined 被 JSON.stringify 丢弃，body 无 speed 字段
+    { settings: { provider_endpoint: 'https://x.com', resource_id: 'rid' }, text: 'x', voiceSpeaker: 'v' },
+    (() => { const b = volcengineRequest({ provider_endpoint: 'https://x.com', resource_id: 'rid' }, 'x', 'v'); delete b.speed; return b; })());
 
 // ============ Chutes ============
 add('chutes-defaults', 'chutes',

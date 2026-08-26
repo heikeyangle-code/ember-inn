@@ -25,6 +25,18 @@ object TtsReader {
     @Volatile
     private var mediaPlayer: MediaPlayer? = null
 
+    /** 朗读会话代号：stop() 自增使下载中的 speakExternal 丢弃结果（官方 resetTtsPlayback 语义）。 */
+    private val session = java.util.concurrent.atomic.AtomicLong(0)
+
+    /** 最近一次失败原因（官方 toastr.error 带真实错误的等价物）；null=无。 */
+    @Volatile
+    var lastError: String? = null
+        private set
+
+    /** 是否正在朗读（系统 TTS 播报中或外部播放器活动）。官方 updateUiAudioPlayState 判定等价。 */
+    fun isPlaying(): Boolean =
+        tts?.isSpeaking == true || mediaPlayer != null
+
     @Synchronized
     private fun engine(context: Context): TextToSpeech? {
         if (tts == null) {
@@ -109,18 +121,32 @@ object TtsReader {
         byParagraphs: Boolean = false,
     ): Boolean = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext false
-        val backend = TtsBackendRegistry.current(context) ?: return@withContext false
+        val backend = TtsBackendRegistry.current(context)
+        if (backend == null) {
+            lastError = "未选择外部 TTS 后端"
+            return@withContext false
+        }
         stopExternal()
+        val mySession = session.incrementAndGet()
         val dir = File(context.cacheDir, "tts").apply { mkdirs() }
         // 分段全部下载完再串行播——原先边下边播且每段先 stop，前一段起播即被下一段杀掉（只剩末段出声）
         val files = mutableListOf<File>()
         val segments = if (byParagraphs) text.split('\n').filter { it.isNotBlank() } else listOf(text)
+        var lastSegmentError: String? = null
         for (seg in segments) {
-            val bytes = runCatching { backend.generateTts(context, seg, voiceId) }.getOrNull() ?: continue
-            if (bytes.isEmpty()) continue
-            files.add(File(dir, "tts-${System.nanoTime()}.mp3").apply { writeBytes(bytes) })
+            if (session.get() != mySession) return@withContext true // 已被 stop 取消：丢弃下载结果
+            val bytes = runCatching { backend.generateTts(context, seg, voiceId) }
+                .onFailure { lastSegmentError = it.message ?: it.javaClass.simpleName }
+                .getOrNull()
+            if (bytes == null || bytes.isEmpty()) continue
+            files.add(File(dir, "tts-${System.nanoTime()}").apply { writeBytes(bytes) })
         }
-        if (files.isEmpty()) return@withContext false
+        if (session.get() != mySession) return@withContext true
+        if (files.isEmpty()) {
+            lastError = lastSegmentError ?: "全部段落合成失败"
+            return@withContext false
+        }
+        lastError = null
         playSequence(files, 0, rate)
     }
 
@@ -143,6 +169,7 @@ object TtsReader {
 
     @Synchronized
     fun stop() {
+        session.incrementAndGet()
         tts?.stop()
         stopExternal()
     }

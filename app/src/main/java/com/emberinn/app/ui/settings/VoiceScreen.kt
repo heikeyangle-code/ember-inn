@@ -60,8 +60,12 @@ fun VoiceScreen(onBack: () -> Unit) {
     var autoGeneration by rememberSaveable { mutableStateOf(VoicePrefs.autoGeneration(context)) }
     var narrateUser by rememberSaveable { mutableStateOf(VoicePrefs.narrateUser(context)) }
     var narrateByParagraphs by rememberSaveable { mutableStateOf(VoicePrefs.narrateByParagraphs(context)) }
+    var narrateQuotedOnly by rememberSaveable { mutableStateOf(VoicePrefs.narrateQuotedOnly(context)) }
+    var narrateDialoguesOnly by rememberSaveable { mutableStateOf(VoicePrefs.narrateDialoguesOnly(context)) }
+    var narrateTranslatedOnly by rememberSaveable { mutableStateOf(VoicePrefs.narrateTranslatedOnly(context)) }
     var skipCodeblocks by rememberSaveable { mutableStateOf(VoicePrefs.skipCodeblocks(context)) }
     var skipTags by rememberSaveable { mutableStateOf(VoicePrefs.skipTags(context)) }
+    var passAsterisks by rememberSaveable { mutableStateOf(VoicePrefs.passAsterisks(context)) }
     var applyRegex by rememberSaveable { mutableStateOf(VoicePrefs.applyRegex(context)) }
     var regexPattern by rememberSaveable { mutableStateOf(VoicePrefs.regexPattern(context)) }
     var ttsProvider by rememberSaveable { mutableStateOf(VoicePrefs.ttsProvider(context)) }
@@ -76,7 +80,10 @@ fun VoiceScreen(onBack: () -> Unit) {
 
     fun save() = VoicePrefs.save(
         context, enabled, voice, rate, autoGeneration, narrateUser,
-        narrateByParagraphs, skipCodeblocks, skipTags, applyRegex, regexPattern,
+        VoicePrefs.periodicAutoGeneration(context), narrateByParagraphs,
+        narrateQuotedOnly, narrateDialoguesOnly, narrateTranslatedOnly,
+        skipCodeblocks, skipTags, passAsterisks,
+        VoicePrefs.multiVoiceEnabled(context), applyRegex, regexPattern,
     )
 
     fun saveProvider(p: String, ep: String, key: String, model: String) {
@@ -123,7 +130,7 @@ fun VoiceScreen(onBack: () -> Unit) {
         ) {
             Text("语音朗读（TTS）", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
             Text(
-                "对齐官方 TTS 设置；官方 1.18 无语音输入（STT）。在线语音提供商在 P3 引擎层接入，本机引擎可直接试听。",
+                "对齐官方 tts 扩展设置（settings.html）；官方 1.18 无语音输入（STT）。",
                 style = MaterialTheme.typography.bodySmall,
                 color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 4.dp),
@@ -136,7 +143,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("启用朗读", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.subhead.fontSize)
                     Text(
-                        "聊天自动朗读将在后续版本接入；启用后本页试听可用",
+                        "开启后按下方自动朗读选项工作；本页试听亦需此项",
                         fontSize = EmberTheme.typo.caption.fontSize,
                         color = EmberTheme.colors.inkMute,
                     )
@@ -195,14 +202,15 @@ GroupLabel("引擎与语音")
                                 color = EmberTheme.colors.inkMute,
                             )
                         }
+                        // 官方 playback_rate：min=0 max=3 step=0.05（settings.html:89）
                         EmberSlider(
                             value = rate,
                             onValueChange = { rate = it; save() },
-                            valueRange = 0.5f..2.0f,
-                            steps = 29,
+                            valueRange = 0f..3f,
+                            steps = 59,
                         )
                         Text(
-                            "0.5 慢速 — 2.0 快速（Android 系统支持范围，1.0 为正常）",
+                            "Audio Playback Speed：0 — 3，步长 0.05，默认 1 为正常",
                             style = MaterialTheme.typography.bodySmall,
                             color = EmberTheme.colors.inkMute,
                         )
@@ -307,16 +315,21 @@ GroupLabel("朗读选项")
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     Text(
-                        "字段对齐官方 TTS 扩展；聊天自动朗读在 P3 接入，以下配置先持久化",
+                        "开关项与顺序对齐官方 tts 扩展 settings.html 的复选框列表",
                         style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
-                    ToggleRow("自动朗读回复", autoGeneration) { autoGeneration = it; save() }
-                    ToggleRow("同时朗读用户消息", narrateUser) { narrateUser = it; save() }
-                    ToggleRow("按段落朗读", narrateByParagraphs) { narrateByParagraphs = it; save() }
+                    // 官方复选框顺序（settings.html:18-66）：enabled 在页首已单独成行
+                    ToggleRow("同时朗读用户消息（Narrate user messages）", narrateUser) { narrateUser = it; save() }
+                    ToggleRow("自动朗读回复（Auto Generation）", autoGeneration) { autoGeneration = it; save() }
+                    ToggleRow("按段落朗读·非流式时（Narrate by paragraphs）", narrateByParagraphs) { narrateByParagraphs = it; save() }
+                    ToggleRow("仅朗读引号内文本", narrateQuotedOnly) { narrateQuotedOnly = it; save() }
+                    ToggleRow("忽略星号内文本（*含引号*）", narrateDialoguesOnly) { narrateDialoguesOnly = it; save() }
+                    ToggleRow("仅朗读译文（无译文跳过该条）", narrateTranslatedOnly) { narrateTranslatedOnly = it; save() }
                     ToggleRow("跳过代码块", skipCodeblocks) { skipCodeblocks = it; save() }
-                    ToggleRow("跳过提示标签（*动作*）", skipTags) { skipTags = it; save() }
+                    ToggleRow("跳过 <tagged> 标签块", skipTags) { skipTags = it; save() }
+                    ToggleRow("保留星号传给引擎", passAsterisks) { passAsterisks = it; save() }
                                         Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),

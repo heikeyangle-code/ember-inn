@@ -198,12 +198,13 @@ object TtsRequestEngine {
 
     // ============ Volcengine（volcengine.js fetchTtsGeneration L295-L315 逐字摘） ============
     // body = { provider_endpoint, resource_id, text, voice_speaker, speed }
+    // speed 原样透传无兜底（官方 settings.speed 默认 0；键缺失时 JSON.stringify 丢弃 undefined）
     fun volcengineRequestBody(settings: JsonObject, text: String, voiceSpeaker: String): JsonObject = buildJsonObject {
         put("provider_endpoint", JsonPrimitive(settings.strOr("provider_endpoint", "")))
         put("resource_id", JsonPrimitive(settings.strOr("resource_id", "")))
         put("text", JsonPrimitive(text))
         put("voice_speaker", JsonPrimitive(voiceSpeaker))
-        put("speed", num(settings.numOrDefault("speed", 1.0)))
+        if (settings.containsKey("speed")) put("speed", num(settings.numOrDefault("speed", 0.0)))
     }
 
     // ============ Chutes（chutes.js fetchTtsGeneration L194-L217 逐字摘） ============

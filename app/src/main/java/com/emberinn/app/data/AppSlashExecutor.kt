@@ -83,6 +83,8 @@ interface SlashMessageActions {
     suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String
     /** /translate：翻译文本；target/provider 缺省用扩展设置（官方 translate 扩展 callback）。 */
     suspend fun translateText(text: String, target: String?, provider: String?): String
+    /** /speak：朗读文本（官方 tts 扩展 onNarrateText；voice=voiceMap 角色名，App 无 voiceMap 忽略）。 */
+    fun speakText(text: String, voice: String?): String
 
     /** /db 子命令附件上下文：返回当前 (characterAvatar, chatFile, charName) 用于 attachments 三源定位。 */
     fun attachmentsContext(): Triple<String, String, String> = Triple("", "", "")
@@ -348,6 +350,16 @@ class AppSlashExecutor(
                     inv.namedArgs["target"],
                     inv.namedArgs["provider"],
                 )
+            },
+        ),
+        SlashCommandDef(
+            "speak",
+            aliases = listOf("narrate", "tts"),
+            description = "朗读文本（官方 tts 扩展 /speak：voice=voiceMap 角色名；App 无 voiceMap，用当前朗读配置）",
+            rawQuotes = true,
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ ->
+                actions.speakText(inv.unnamedArgs.joinToString(" "), inv.namedArgs["voice"])
             },
         ),
         SlashCommandDef(

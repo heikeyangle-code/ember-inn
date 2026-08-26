@@ -638,15 +638,25 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 朗读指定消息（长按菜单）；文本处理与分段对齐官方 tts 扩展。 */
     fun narrateMessage(index: Int) {
         val msgs = chatStore.messages(sessionId)
-        val text = msgs.getOrNull(index)?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
-        narrateText(text)
+        val el = msgs.getOrNull(index)?.jsonObject ?: return
+        narrateText(narrationSourceText(el))
     }
 
     /** 朗读最后一条 AI 消息（自动朗读）。 */
     fun narrateLastMessage() {
-        val msgs = chatStore.messages(sessionId)
-        val last = msgs.lastOrNull()?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
-        narrateText(last)
+        val el = chatStore.messages(sessionId).lastOrNull()?.jsonObject ?: return
+        narrateText(narrationSourceText(el))
+    }
+
+    /**
+     * 官方 processAndQueueTtsMessage 文本选取（tts/index.js:671）：narrate_translated_only 时读
+     * extra.display_text（译文），否则 mes 原文。
+     */
+    private fun narrationSourceText(el: JsonObject): String {
+        val prefs = VoicePrefs.read(getApplication())
+        val mes = el["mes"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        if (!prefs.narrateTranslatedOnly) return mes
+        return el["extra"]?.jsonObject?.get("display_text")?.jsonPrimitive?.contentOrNull ?: mes
     }
 
     fun stopNarration() { TtsReader.stop() }
@@ -1720,12 +1730,64 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             skipTags = voice.skipTags,
             applyRegex = voice.applyRegex,
             regexPattern = voice.regexPattern,
+            passAsterisks = voice.passAsterisks,
+            dialoguesOnly = voice.narrateDialoguesOnly,
+            quotedOnly = voice.narrateQuotedOnly,
         )
         // speak 现为 suspend（支持外部 HTTP 后端 MediaPlayer 播放）：协程发起
         viewModelScope.launch(Dispatchers.IO) {
             val ok = TtsReader.speak(getApplication(), cleaned, voice.voice, voice.rate, voice.narrateByParagraphs)
             if (!ok && cleaned.isNotBlank()) {
-                _notice.value = "（语音引擎未就绪，请到 设置→语音 检查。）"
+                // 官方 toastr.error 带真实错误；系统 TTS 无细节时给通用提示
+                val detail = TtsReader.lastError
+                _notice.value = if (detail != null) "（朗读失败：$detail）" else "（语音引擎未就绪，请到 设置→语音 检查。）"
+            }
+        }
+    }
+
+    /** 官方 onAudioControlClicked（tts/index.js:413-425）：播放中→全停；否则朗读最后一条消息。 */
+    fun toggleTtsPlayback() {
+        if (TtsReader.isPlaying()) {
+            stopNarration()
+        } else {
+            narrateLastMessage()
+        }
+    }
+
+    /** /speak（官方 tts 扩展 onNarrateText，tts/index.js:173-206）：空文本直接返回；voice=角色名走
+     *  voiceMap，App 无 voiceMap（登记近似）→ 忽略，用当前朗读配置。官方 callback 恒返回 ''。 */
+    override fun speakText(text: String, voice: String?): String {
+        if (text.isBlank()) return ""
+        narrateText(text)
+        return ""
+    }
+
+    /** 官方 playFullConversation（tts/index.js:841-860）：跳过 system 与 '...'/空文本，逐条排队。 */
+    fun narrateAllChat() {
+        val prefs = VoicePrefs.read(getApplication())
+        if (!prefs.enabled) {
+            _notice.value = "（TTS 未启用：请到 设置→语音 打开。）"
+            return
+        }
+        val texts = chatStore.messages(sessionId).mapNotNull { el ->
+            val obj = el.jsonObject
+            val isSystem = obj["is_system"]?.jsonPrimitive?.booleanOrNull == true
+            val mes = narrationSourceText(obj)
+            if (!isSystem && mes != "..." && mes.isNotEmpty()) mes else null
+        }
+        if (texts.isEmpty()) {
+            _notice.value = "（没有可朗读的消息。）"
+            return
+        }
+        stopNarration()
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = TtsReader.speak(
+                getApplication(), texts.joinToString("\n"),
+                prefs.voice, prefs.rate, byParagraphs = true,
+            )
+            if (!ok) {
+                val detail = TtsReader.lastError
+                _notice.value = if (detail != null) "（朗读失败：$detail）" else "（语音引擎未就绪，请到 设置→语音 检查。）"
             }
         }
     }
@@ -2573,7 +2635,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val newId = (cur - 1 + count) % count
         chatStore.swipeTo(sessionId, index, newId)
         refreshMessages()
-        // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译
+        // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译；
+        // TTS 扩展订阅 MESSAGE_SWIPED → resetTtsPlayback（tts/index.js:1574）→ 切变体先停朗读
+        TtsReader.stop()
         kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
         translateOnSwiped(index)
     }
@@ -2591,7 +2655,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (cur + 1 < count) {
             chatStore.swipeTo(sessionId, index, cur + 1)
             refreshMessages()
-            // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译
+            // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译；
+            // TTS 扩展订阅 MESSAGE_SWIPED → resetTtsPlayback（tts/index.js:1574）→ 切变体先停朗读
+            TtsReader.stop()
             kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
             translateOnSwiped(index)
         } else if (index == msgs.lastIndex && !isUser(el)) {
@@ -2602,6 +2668,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         } else {
             chatStore.swipeTo(sessionId, index, 0)
             refreshMessages()
+            // MESSAGE_SWIPED → resetTtsPlayback（tts/index.js:1574）
+            TtsReader.stop()
             kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
             translateOnSwiped(index)
         }
@@ -2650,7 +2718,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun swipeToVariant(index: Int, variant: Int) {
         if (chatStore.swipeTo(sessionId, index, variant)) {
             refreshMessages()
-            // 官方 swipe_left_right_handler：变体跳转同走 MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译
+            // 官方 swipe_left_right_handler：变体跳转同走 MESSAGE_SWIPED(mesId)（script.js:10255）+
+            // translate 扩展重译；TTS MESSAGE_SWIPED → resetTtsPlayback（tts/index.js:1574）
+            TtsReader.stop()
             kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
             translateOnSwiped(index)
             // 官方 memory MESSAGE_SWIPED → onChatEvent
@@ -2969,6 +3039,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (_isStreaming.value) return
         val removed = chatStore.truncateFrom(sessionId, index)
         if (removed.isEmpty()) return
+        // 官方 MESSAGE_DELETED → resetTtsPlayback（tts/index.js:1576）：消息没了先停朗读
+        TtsReader.stop()
         // 官方：for (let i = chat.length-1; i >= this_del_mes; i--) deleteItemizedPromptForMessage(i)
         for (i in (index + removed.size - 1) downTo index) {
             ItemizationStore.deleteMessage(getApplication<Application>().filesDir, sessionId, i)

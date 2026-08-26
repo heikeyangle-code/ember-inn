@@ -170,11 +170,11 @@ class ChatterboxTtsBackend : TtsBackend {
 //    /api/text-to-speech/coqui/generate-tts。body 由引擎层 [TtsRequestEngine.coquiBody] 构造。
 //    voiceId 形如 'tts_models/.../model[lang][speaker]'：tokens 解析逻辑在引擎层。
 //    language/speaker 为 'none' → parseInt('none')=NaN → JSON null。
-//    注：coqui.js 无 provider_endpoint 默认（走 getApiUrl），此处用 Coqui API 常用端口作本地默认。
+//    注：coqui 走 ST Extras 代理（getApiUrl），官方默认 http://localhost:5100（extensions.js:62）。
 class CoquiTtsBackend : TtsBackend {
     override val id = "coqui"
     override val displayName = "Coqui TTS"
-    override val defaultEndpoint = "http://localhost:5002"
+    override val defaultEndpoint = "http://localhost:5100"
 
     // coqui.js fetchTtsVoiceObjects 返回用户 voiceMapDict（无静态列表）。给出 .js 注释中的示例 model_id 作占位。
     override suspend fun getVoices(context: Context): List<TtsVoice> = listOf(

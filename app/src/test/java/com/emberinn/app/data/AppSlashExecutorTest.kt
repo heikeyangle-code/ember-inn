@@ -49,6 +49,10 @@ class AppSlashExecutorTest {
             calls += "translate:$target:$provider:$text"
             return "译文"
         }
+        override fun speakText(text: String, voice: String?): String {
+            calls += "speak:$voice:$text"
+            return ""
+        }
         override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, scan: Boolean, ephemeral: Boolean, filter: String?): String {
             calls += "inject:$id:$position:$depth:$role:$scan:$ephemeral:${filter ?: ""}:$text"
             return "abc12345"
@@ -130,6 +134,17 @@ class AppSlashExecutorTest {
             listOf("translate:zh-CN:deeplx:Hello world", "translate:null:null:你好世界"),
             a.calls,
         )
+    }
+
+    @Test
+    fun `speak forwards text and optional voice`() = runBlocking {
+        val a = FakeActions()
+        val out1 = AppSlashExecutor(a).executeAsync("/speak voice=小明 你好呀")
+        val out2 = AppSlashExecutor(a).executeAsync("/narrate Hello there")
+        assertEquals("", out1)
+        assertEquals("", out2)
+        // 官方 aliases narrate/tts（tts/index.js:1583-1584）；voice 无匹配 voiceMap 时 App 侧忽略
+        assertEquals(listOf("speak:小明:你好呀", "speak:null:Hello there"), a.calls)
     }
 
     @Test

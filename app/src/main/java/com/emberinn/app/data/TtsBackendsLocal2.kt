@@ -29,8 +29,7 @@ import org.json.JSONObject
  * - sbvits2 / vits 的官方 fetchTtsGeneration 用 URLSearchParams（query string / form-urlencoded），
  *   非 JSON body——引擎层 [TtsRequestEngine.sbvits2Query] / [TtsRequestEngine.vitsForm] 忠实保留
  *   原传输方式（formEncode = URLEncoder.encode，与 JS URLSearchParams.toString 一致 space=+）。
- * - kokoro-worker.js / openai-compatible.js 与官方不同源（WebWorker / ST 代理），登记不差分
- *   （见 HANDOFF 4.4）；App 自有简化契约。
+ * - openai-compatible.js 与官方不同源（ST 代理），登记不差分（见 HANDOFF 4.4）；App 自有简化契约。
  * - 默认端点取各 .js 的官方默认值（defaultSettings / constructor settings.provider_endpoint）。
  */
 
@@ -71,42 +70,10 @@ private fun JsonObject.toOrgJson(): org.json.JSONObject {
     return out
 }
 
-// 1) kokoro-worker — 官方是 WebWorker（kokoro-worker.js，无 fetchTtsGeneration），generateTts 内部
-//    tts.generate(text,{voice,speed})；与官方不同源——按需求契约为 POST {endpoint}/tts
-//    {text,voice,speaking_rate}（登记不差分，见 HANDOFF 4.4）。
-class KokoroWorkerTtsBackend : TtsBackend {
-    override val id = "kokoro-worker"
-    override val displayName = "Kokoro (Worker)"
-    override val defaultEndpoint = "http://localhost:8881"
+// 注：官方无 kokoro-worker 独立 provider（kokoro-worker.js 是 Kokoro provider 内部 WebWorker，
+// tts/index.js ttsProviders 表仅 Kokoro 一项），此前误注册的 KokoroWorkerTtsBackend 已移除。
 
-    override suspend fun getVoices(context: Context): List<TtsVoice> = listOf(
-        TtsVoice("af_sky", "af_sky (American Female)"),
-        TtsVoice("af_bella", "af_bella (American Female)"),
-        TtsVoice("af_nicole", "af_nicole (American Female)"),
-        TtsVoice("am_michael", "am_michael (American Male)"),
-        TtsVoice("am_adam", "am_adam (American Male)"),
-        TtsVoice("bf_emma", "bf_emma (British Female)", "en-GB"),
-        TtsVoice("bm_george", "bm_george (British Male)", "en-GB"),
-    )
-
-    override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val body = JSONObject()
-                    .put("text", text)
-                    .put("voice", voiceId)
-                    .put("speaking_rate", 1.0)
-                    .toString()
-                val request = Request.Builder()
-                    .url(endpoint(context, defaultEndpoint).trimEnd('/') + "/tts")
-                    .post(body.toRequestBody(jsonMedia))
-                    .build()
-                client.newCall(request).execute().use { it.body?.bytes() }
-            }.getOrNull()
-        }
-}
-
-// 2) sbvits2 — sbvits2.js fetchTtsGeneration：POST {endpoint}/voice?{query}（URLSearchParams，无 body）。
+// 1) sbvits2 — sbvits2.js fetchTtsGeneration：POST {endpoint}/voice?{query}（URLSearchParams，无 body）。
 //    query 由引擎层 [TtsRequestEngine.sbvits2Query] 构造。voiceId 格式 model_id-speaker_id-style
 //    → split('-')，缺位为 "undefined"（对齐 JS 解构）。官方默认值（defaultSettings）传 settings。
 class SbVits2TtsBackend : TtsBackend {
@@ -370,10 +337,9 @@ class OpenAiCompatibleTtsBackend : TtsBackend {
         }
 }
 
-/** 注册第二批 8 个本地 TTS 后端。在 App 启动时被引用即触发 init。 */
+/** 注册第二批 7 个本地 TTS 后端（kokoro-worker 已移除：官方非独立 provider）。在 App 启动时被引用即触发 init。 */
 object TtsBackendsLocal2Init {
     init {
-        TtsBackendRegistry.register(KokoroWorkerTtsBackend())
         TtsBackendRegistry.register(SbVits2TtsBackend())
         TtsBackendRegistry.register(SileroTtsBackend())
         TtsBackendRegistry.register(SpeechT5TtsBackend())

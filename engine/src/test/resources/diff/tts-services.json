@@ -517,7 +517,45 @@
       }
     },
     {
-      "id": "024-chutes-defaults",
+      "id": "024-volcengine-speed-zero-passthrough",
+      "kind": "volcengine",
+      "args": {
+        "settings": {
+          "provider_endpoint": "https://x.com",
+          "resource_id": "rid",
+          "speed": 0
+        },
+        "text": "x",
+        "voiceSpeaker": "v"
+      },
+      "expected": {
+        "provider_endpoint": "https://x.com",
+        "resource_id": "rid",
+        "text": "x",
+        "voice_speaker": "v",
+        "speed": 0
+      }
+    },
+    {
+      "id": "025-volcengine-speed-missing-dropped",
+      "kind": "volcengine",
+      "args": {
+        "settings": {
+          "provider_endpoint": "https://x.com",
+          "resource_id": "rid"
+        },
+        "text": "x",
+        "voiceSpeaker": "v"
+      },
+      "expected": {
+        "provider_endpoint": "https://x.com",
+        "resource_id": "rid",
+        "text": "x",
+        "voice_speaker": "v"
+      }
+    },
+    {
+      "id": "026-chutes-defaults",
       "kind": "chutes",
       "args": {
         "settings": {
@@ -533,7 +571,7 @@
       }
     },
     {
-      "id": "025-chutes-explicit-voice",
+      "id": "027-chutes-explicit-voice",
       "kind": "chutes",
       "args": {
         "settings": {
@@ -549,7 +587,7 @@
       }
     },
     {
-      "id": "026-chutes-speed-zero-fallback",
+      "id": "028-chutes-speed-zero-fallback",
       "kind": "chutes",
       "args": {
         "settings": {
@@ -565,7 +603,7 @@
       }
     },
     {
-      "id": "027-pollinations-defaults",
+      "id": "029-pollinations-defaults",
       "kind": "pollinations",
       "args": {
         "settings": {
@@ -581,7 +619,7 @@
       }
     },
     {
-      "id": "028-pollinations-long-split",
+      "id": "030-pollinations-long-split",
       "kind": "pollinations",
       "args": {
         "settings": {
@@ -597,7 +635,7 @@
       }
     },
     {
-      "id": "029-pollinations-prefix-semantic",
+      "id": "031-pollinations-prefix-semantic",
       "kind": "pollinations",
       "args": {
         "settings": {
@@ -613,7 +651,7 @@
       }
     },
     {
-      "id": "030-google-native-no-reverse-proxy",
+      "id": "032-google-native-no-reverse-proxy",
       "kind": "google-native",
       "args": {
         "settings": {
@@ -643,7 +681,7 @@
       }
     },
     {
-      "id": "031-google-native-with-reverse-proxy",
+      "id": "033-google-native-with-reverse-proxy",
       "kind": "google-native",
       "args": {
         "settings": {
@@ -673,7 +711,7 @@
       }
     },
     {
-      "id": "032-google-native-invalid-reverse-proxy",
+      "id": "034-google-native-invalid-reverse-proxy",
       "kind": "google-native",
       "args": {
         "settings": {
@@ -703,7 +741,7 @@
       }
     },
     {
-      "id": "033-google-translate-short",
+      "id": "035-google-translate-short",
       "kind": "google-translate",
       "args": {
         "settings": {},
@@ -718,7 +756,7 @@
       }
     },
     {
-      "id": "034-google-translate-split-200",
+      "id": "036-google-translate-split-200",
       "kind": "google-translate",
       "args": {
         "settings": {},
@@ -735,7 +773,7 @@
       }
     },
     {
-      "id": "035-google-translate-multiline-split",
+      "id": "037-google-translate-multiline-split",
       "kind": "google-translate",
       "args": {
         "settings": {},

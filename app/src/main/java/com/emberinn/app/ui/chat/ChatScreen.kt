@@ -121,6 +121,7 @@ import com.emberinn.app.data.ExtensionManager
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
+import com.emberinn.app.data.TtsReader
 import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelHostAction
 import com.emberinn.app.renderer.KernelPoolHolder
@@ -1202,6 +1203,12 @@ fun ChatScreen(
         onDispose { ThemeState.clear() }
     }
 
+    // 官方 CHAT_CHANGED → tts stopNarration + resetTtsPlayback（tts/index.js:1576）：
+    // 切会话/离开聊天页时停掉朗读（session 变化即官方 chatChanged 语义）
+    DisposableEffect(sessionId) {
+        onDispose { TtsReader.stop() }
+    }
+
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 
@@ -2017,6 +2024,18 @@ fun ChatScreen(
                 MenuRow(FaIcons.Eraser, "清空译文（Clear Translations）", danger = true) {
                     showMore = false
                     showClearTranslationsConfirm = true
+                }
+                // ── 官方 tts 扩展魔杖项：#ttsExtensionMenuItem / #ttsExtensionNarrateAll ──
+                // （addAudioControl，tts/index.js:429-441；播放中图标为 stop-circle，此处菜单
+                //   即开即关，恒用 circle-play 起手，toggle 语义在 VM 内）
+                MenuSectionLabel("朗读控制（官方魔杖）")
+                MenuRow(FaIcons.CirclePlay, "TTS 播放（TTS Playback）") {
+                    showMore = false
+                    vm.toggleTtsPlayback()
+                }
+                MenuRow(FaIcons.Radio, "朗读整聊（Narrate All Chat）") {
+                    showMore = false
+                    vm.narrateAllChat()
                 }
                 // ── App 扩展（官方无此入口，移动端便捷项）──
                 MenuSectionLabel("更多")

@@ -17,9 +17,15 @@ object VoicePrefs {
         val rate: Float,
         val autoGeneration: Boolean,
         val narrateUser: Boolean,
+        val periodicAutoGeneration: Boolean,
         val narrateByParagraphs: Boolean,
+        val narrateQuotedOnly: Boolean,
+        val narrateDialoguesOnly: Boolean,
+        val narrateTranslatedOnly: Boolean,
         val skipCodeblocks: Boolean,
         val skipTags: Boolean,
+        val passAsterisks: Boolean,
+        val multiVoiceEnabled: Boolean,
         val applyRegex: Boolean,
         val regexPattern: String,
         /** 外部 TTS 后端 id（"system" = Android 系统 TTS，对齐官方 extension_settings.tts.provider）。 */
@@ -35,9 +41,15 @@ object VoicePrefs {
         rate = rate(context),
         autoGeneration = autoGeneration(context),
         narrateUser = narrateUser(context),
+        periodicAutoGeneration = periodicAutoGeneration(context),
         narrateByParagraphs = narrateByParagraphs(context),
+        narrateQuotedOnly = narrateQuotedOnly(context),
+        narrateDialoguesOnly = narrateDialoguesOnly(context),
+        narrateTranslatedOnly = narrateTranslatedOnly(context),
         skipCodeblocks = skipCodeblocks(context),
         skipTags = skipTags(context),
+        passAsterisks = passAsterisks(context),
+        multiVoiceEnabled = multiVoiceEnabled(context),
         applyRegex = applyRegex(context),
         regexPattern = regexPattern(context),
         ttsProvider = ttsProvider(context),
@@ -52,21 +64,47 @@ object VoicePrefs {
     fun voice(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("tts_voice", "") ?: ""
 
-    /** 语速，Android TextToSpeech 实际支持约 0.5–2.0（1.0 = 正常）。 */
+    /** 语速（官方 playback_rate：滑条 0–3 步长 0.05，默认 1；settings.html:89）。 */
     fun rate(context: Context): Float =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("playback_rate", 1.0f)
 
+    /** 官方 defaultSettings.auto_generation = true（tts/index.js:31）。 */
     fun autoGeneration(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_auto_generation", false)
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_auto_generation", true)
 
     fun narrateUser(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_narrate_user", false)
 
+    /** 官方 tts_periodic_auto_generation（流式期间按段朗读）；defaultSettings 无此键 → falsy 默认关。 */
+    fun periodicAutoGeneration(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_periodic_auto_generation", false)
+
     fun narrateByParagraphs(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_narrate_by_paragraphs", false)
 
+    /** 官方 tts_narrate_quoted（只读引号内文本）；非 defaultSettings 键 → 默认关。 */
+    fun narrateQuotedOnly(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_narrate_quoted", false)
+
+    /** 官方 tts_narrate_dialogues（移除星号包裹内容而非仅 * 字符）；默认关。 */
+    fun narrateDialoguesOnly(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_narrate_dialogues", false)
+
+    /** 官方 tts_narrate_translated_only（有 extra.display_text 时读译文）；默认关。 */
+    fun narrateTranslatedOnly(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_narrate_translated_only", false)
+
+    /** 官方 tts_pass_asterisks（保留 * 交给引擎）；defaultSettings 无此键 → 默认关。 */
+    fun passAsterisks(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_pass_asterisks", false)
+
+    /** 官方 tts_multi_voice_enabled（引号/星号/其余文本分声线，需 voiceMap）；defaultSettings=false。 */
+    fun multiVoiceEnabled(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_multi_voice_enabled", false)
+
+    /** 官方 defaultSettings 无此键 → undefined falsy → 默认关（tts/index.js:867-874）。 */
     fun skipCodeblocks(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_skip_codeblocks", true)
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_skip_codeblocks", false)
 
     fun skipTags(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_skip_tags", false)
@@ -106,9 +144,15 @@ object VoicePrefs {
         rate: Float,
         autoGeneration: Boolean,
         narrateUser: Boolean,
+        periodicAutoGeneration: Boolean,
         narrateByParagraphs: Boolean,
+        narrateQuotedOnly: Boolean,
+        narrateDialoguesOnly: Boolean,
+        narrateTranslatedOnly: Boolean,
         skipCodeblocks: Boolean,
         skipTags: Boolean,
+        passAsterisks: Boolean,
+        multiVoiceEnabled: Boolean,
         applyRegex: Boolean,
         regexPattern: String,
     ) {
@@ -118,9 +162,15 @@ object VoicePrefs {
             .putFloat("playback_rate", rate)
             .putBoolean("tts_auto_generation", autoGeneration)
             .putBoolean("tts_narrate_user", narrateUser)
+            .putBoolean("tts_periodic_auto_generation", periodicAutoGeneration)
             .putBoolean("tts_narrate_by_paragraphs", narrateByParagraphs)
+            .putBoolean("tts_narrate_quoted", narrateQuotedOnly)
+            .putBoolean("tts_narrate_dialogues", narrateDialoguesOnly)
+            .putBoolean("tts_narrate_translated_only", narrateTranslatedOnly)
             .putBoolean("tts_skip_codeblocks", skipCodeblocks)
             .putBoolean("tts_skip_tags", skipTags)
+            .putBoolean("tts_pass_asterisks", passAsterisks)
+            .putBoolean("tts_multi_voice_enabled", multiVoiceEnabled)
             .putBoolean("tts_apply_regex", applyRegex)
             .putString("tts_regex_pattern", regexPattern)
             .apply()
