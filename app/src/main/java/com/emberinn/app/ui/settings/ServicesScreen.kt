@@ -12,6 +12,7 @@ import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.PromptTemplateStore
 import com.emberinn.app.data.StyleStore
 import com.emberinn.engine.prompt.ImageGenPromptEngine
+import com.emberinn.engine.prompt.ImageGenRequestEngine
 import com.emberinn.app.data.GenerationPrefs
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -194,6 +195,40 @@ private val TARGET_LANGUAGES = listOf(
 
 /** 官方 languageCodes 值集合（translate/index.js），供 /translate target= 校验 */
 internal val TRANSLATE_LANGUAGE_CODES = TARGET_LANGUAGES.map { it.value }
+
+/** 官方 resolutionOptions 各项显示名（index.js L1062-L1093，translate 文案的直译/保留）。 */
+private val RESOLUTION_LABELS = mapOf(
+    "sd_res_512x512" to "512x512（1:1，图标/头像）",
+    "sd_res_600x600" to "600x600（1:1，图标/头像）",
+    "sd_res_512x768" to "512x768（2:3，竖版角色卡）",
+    "sd_res_768x512" to "768x512（3:2，横版）",
+    "sd_res_960x540" to "960x540（16:9，横版壁纸）",
+    "sd_res_540x960" to "540x960（9:16，竖版壁纸）",
+    "sd_res_1920x1088" to "1920x1088（16:9 1080p 横版壁纸）",
+    "sd_res_1088x1920" to "1088x1920（9:16 1080p 竖版壁纸）",
+    "sd_res_1280x720" to "1280x720（16:9 720p 横版壁纸）",
+    "sd_res_720x1280" to "720x1280（9:16 720p 竖版壁纸）",
+    "sd_res_1024x1024" to "1024x1024（1:1，SDXL）",
+    "sd_res_1152x896" to "1152x896（9:7，SDXL）",
+    "sd_res_896x1152" to "896x1152（7:9，SDXL）",
+    "sd_res_1216x832" to "1216x832（19:13，SDXL）",
+    "sd_res_832x1216" to "832x1216（13:19，SDXL）",
+    "sd_res_1344x768" to "1344x768（4:3，SDXL）",
+    "sd_res_768x1344" to "768x1344（3:4，SDXL）",
+    "sd_res_1536x640" to "1536x640（24:10，SDXL）",
+    "sd_res_640x1536" to "640x1536（10:24，SDXL）",
+    "sd_res_1536x1024" to "1536x1024（3:2，ChatGPT）",
+    "sd_res_1024x1536" to "1024x1536（2:3，ChatGPT）",
+    "sd_res_1024x1792" to "1024x1792（4:7，DALL-E）",
+    "sd_res_1792x1024" to "1792x1024（7:4，DALL-E）",
+    "sd_res_1280x1280" to "1280x1280（1:1，Z.AI）",
+    "sd_res_1568x1056" to "1568x1056（3:2，Z.AI）",
+    "sd_res_1056x1568" to "1056x1568（2:3，Z.AI）",
+    "sd_res_1472x1088" to "1472x1088（4:3，Z.AI）",
+    "sd_res_1088x1472" to "1088x1472（3:4，Z.AI）",
+    "sd_res_1728x960" to "1728x960（16:9，Z.AI）",
+    "sd_res_960x1728" to "960x1728（9:16，Z.AI）",
+)
 
 // 官方 stable-diffusion/index.js 的 sources（取主流自托管 / 云来源）
 private val IMAGE_SOURCES = listOf(
@@ -493,6 +528,22 @@ private fun ImageCard() {
         TextFieldRow("调度器（scheduler）", scheduler) { scheduler = it; saveAdvanced() }
         DecimalRow("CFG 强度（cfg_scale）", scale) { scale = it; saveAdvanced() }
         TextFieldRow("种子（seed，-1=随机）", seed) { seed = it; saveAdvanced() }
+        // 官方 #sd_resolution 预设 + onResolutionChange（index.js L1095-L1107）：选中即写入宽高
+        val presetId = ImageGenRequestEngine.RESOLUTION_OPTIONS
+            .firstOrNull {
+                it.second.first == width.toIntOrNull() && it.second.second == height.toIntOrNull()
+            }?.first ?: ""
+        MenuPicker(
+            "分辨率预设",
+            RESOLUTION_LABELS[presetId] ?: "自定义",
+            ImageGenRequestEngine.RESOLUTION_OPTIONS.map { DropdownOption(it.first, RESOLUTION_LABELS[it.first] ?: it.first) },
+        ) { id ->
+            val size = ImageGenRequestEngine.RESOLUTION_OPTIONS.firstOrNull { it.first == id }?.second ?: return@MenuPicker
+            // 官方先写 height 再写 width（onResolutionChange L1104-L1105）
+            height = size.second.toString()
+            width = size.first.toString()
+            saveAdvanced()
+        }
         TextFieldRow("宽度（width）", width) { width = it; saveAdvanced() }
         TextFieldRow("高度（height）", height) { height = it; saveAdvanced() }
         TextButton(

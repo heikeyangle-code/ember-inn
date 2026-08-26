@@ -94,6 +94,11 @@ class ImageGenClient {
         negativePrompt: String = "",
         extraPrompt: String = "",
         additionalNegativePrefix: String = "",
+        // 官方 generationMode（index.js L113-L127）：MESSAGE=-1；FACE=5 / BACKGROUND=7 /
+        // FACE_MULTIMODAL=10 触发尺寸调整
+        generationType: Int = -1,
+        mediaWidth: Int? = null,
+        mediaHeight: Int? = null,
     ): String? = withContext(Dispatchers.IO) {
         if (prompt.isBlank()) return@withContext null
         val source = ServicesPrefs.imageSource(context)
@@ -117,7 +122,49 @@ class ImageGenClient {
         val fullPrompt = combinePrefixes(prefix, prompt, "{prompt}")
         val negativeChain = combinePrefixes(ServicesPrefs.imageNegativePrompt(context), negativePrompt)
         val fullNegative = combinePrefixes(additionalNegativePrefix, negativeChain)
-        runCatching {
+        // 官方 generatePicture：setTypeSpecificDimensions（index.js L3102-L3145，引擎差分 11 例）
+        // 先调整 sd_width/sd_height，生成后还原（restoreDimensions 语义）。snap 开且像素数变化时
+        // 会吸附到官方 resolutionOptions 最近预设。
+        val origW = ServicesPrefs.imageWidth(context)
+        val origH = ServicesPrefs.imageHeight(context)
+        val adjusted = ImageGenRequestEngine.setTypeSpecificDimensions(
+            width = origW,
+            height = origH,
+            generationType = generationType,
+            mediaWidth = mediaWidth,
+            mediaHeight = mediaHeight,
+            snap = ServicesPrefs.imageSnap(context),
+        )
+        val dimsAdjusted = adjusted.first != origW || adjusted.second != origH
+        if (dimsAdjusted) {
+            context.getSharedPreferences("ember_services", Context.MODE_PRIVATE).edit()
+                .putInt("sd_width", adjusted.first)
+                .putInt("sd_height", adjusted.second)
+                .apply()
+        }
+        try {
+            dispatchGenerate(context, source, url, model, steps, apiKey, fullPrompt, fullNegative)
+        } finally {
+            if (dimsAdjusted) {
+                context.getSharedPreferences("ember_services", Context.MODE_PRIVATE).edit()
+                    .putInt("sd_width", origW)
+                    .putInt("sd_height", origH)
+                    .apply()
+            }
+        }
+    }
+
+    /** generate 的按源分派主体（官方 generatePicture switch L3340-L3522 区段）。 */
+    private suspend fun dispatchGenerate(
+        context: Context,
+        source: String,
+        url: String,
+        model: String,
+        steps: Int,
+        apiKey: String,
+        fullPrompt: String,
+        fullNegative: String,
+    ): String? = runCatching {
             when (source) {
                 "openai" -> openAi(context, fullPrompt)
                 "sdcpp" -> auto1111(context, url, null, fullPrompt, fullNegative, steps, model, sdcpp = true)

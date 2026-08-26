@@ -305,6 +305,30 @@ class ImageGenServicesDiffTest {
                     val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content
                     assertEquals("case $id", expectedResult, actual.toString())
                 }
+                "closest-resolution" -> {
+                    val width = args.getValue("width").jsonPrimitive.content.toInt()
+                    val height = args.getValue("height").jsonPrimitive.content.toInt()
+                    val actual = ImageGenRequestEngine.getClosestKnownResolution(width, height)
+                    val expectedResult = expected.jsonObject.getValue("result").jsonPrimitive.content
+                    assertEquals("case $id", expectedResult, actual)
+                }
+                "set-type-dims" -> {
+                    fun i(k: String): Int? {
+                        val el = args[k] ?: return null
+                        return if (el is JsonNull) null else el.jsonPrimitive.content.toDouble().toInt()
+                    }
+                    val actual = ImageGenRequestEngine.setTypeSpecificDimensions(
+                        width = i("width") ?: 0,
+                        height = i("height") ?: 0,
+                        generationType = i("generationType") ?: -99,
+                        mediaWidth = i("mediaWidth"),
+                        mediaHeight = i("mediaHeight"),
+                        snap = args.getValue("snap").jsonPrimitive.content == "true",
+                    )
+                    val exp = expected.jsonObject.getValue("result").jsonObject
+                    assertEquals("case $id width", exp.getValue("width").jsonPrimitive.content.toInt(), actual.first)
+                    assertEquals("case $id height", exp.getValue("height").jsonPrimitive.content.toInt(), actual.second)
+                }
                 "novel-params" -> {
                     fun num(k: String) = (args[k] ?: error("missing $k")).let { el ->
                         when (el) {
@@ -329,7 +353,8 @@ class ImageGenServicesDiffTest {
                     assertEquals("case $id width", exp.getValue("width").jsonPrimitive.content.toInt(), p.width)
                     assertEquals("case $id height", exp.getValue("height").jsonPrimitive.content.toInt(), p.height)
                     assertEquals("case $id sm", exp.getValue("sm").jsonPrimitive.content == "true", p.sm)
-                    assertEquals("case $id smDyn", exp.getValue("sm_dyn").jsonPrimitive.content == "true", p.smDyn)
+                    // 官方参考实现返回对象字面量 { …, smDyn }（camelCase，非请求体的 sm_dyn）
+                    assertEquals("case $id smDyn", exp.getValue("smDyn").jsonPrimitive.content == "true", p.smDyn)
                 }
                 "skip-cfg-sigma" -> {
                     val width = args.getValue("width").jsonPrimitive.content.toInt()

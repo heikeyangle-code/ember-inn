@@ -790,6 +790,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 prompt,
                 negativePrompt = ServicesPrefs.imageCharaNegativePrompt(ctx, character?.id),
                 extraPrompt = ServicesPrefs.imageCharaPrompt(ctx, character?.id),
+                // 官方 generatePicture(generationType)：FACE/BACKGROUND 等模式驱动尺寸调整+snap
+                generationType = mode,
             )
             withContext(Dispatchers.Main) {
                 if (path != null) {

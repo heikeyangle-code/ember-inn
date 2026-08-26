@@ -1635,6 +1635,169 @@
       "expected": {
         "result": "{\"prompt\":\"x\",\"negative_prompt\":\"\",\"sampler_name\":\"DDIM\",\"steps\":20,\"cfg_scale\":7,\"width\":512,\"height\":512,\"restore_faces\":false,\"enable_hr\":false,\"denoising_strength\":1,\"clip_skip\":1,\"upscaler_scale\":1,\"seed\":7}"
       }
+    },
+    {
+      "id": "080-closest-resolution-exact-portrait-sdxl",
+      "kind": "closest-resolution",
+      "args": {
+        "width": 832,
+        "height": 1216
+      },
+      "expected": {
+        "result": "sd_res_832x1216"
+      }
+    },
+    {
+      "id": "081-closest-resolution-near-miss-landscape",
+      "kind": "closest-resolution",
+      "args": {
+        "width": 1200,
+        "height": 800
+      },
+      "expected": {
+        "result": "sd_res_1216x832"
+      }
+    },
+    {
+      "id": "082-closest-resolution-generic-square",
+      "kind": "closest-resolution",
+      "args": {
+        "width": 500,
+        "height": 500
+      },
+      "expected": {
+        "result": "sd_res_512x512"
+      }
+    },
+    {
+      "id": "083-closest-resolution-hd-wide",
+      "kind": "closest-resolution",
+      "args": {
+        "width": 1600,
+        "height": 900
+      },
+      "expected": {
+        "result": "sd_res_1728x960"
+      }
+    },
+    {
+      "id": "084-closest-resolution-chatgpt-portrait",
+      "kind": "closest-resolution",
+      "args": {
+        "width": 1000,
+        "height": 1400
+      },
+      "expected": {
+        "result": "sd_res_1088x1472"
+      }
+    },
+    {
+      "id": "085-set-type-dims-face-square-to-portrait",
+      "kind": "set-type-dims",
+      "args": {
+        "width": 512,
+        "height": 512,
+        "generationType": 5,
+        "mediaWidth": null,
+        "mediaHeight": null,
+        "snap": false
+      },
+      "expected": {
+        "result": {
+          "width": 512,
+          "height": 768
+        }
+      }
+    },
+    {
+      "id": "086-set-type-dims-face-already-portrait-noop",
+      "kind": "set-type-dims",
+      "args": {
+        "width": 512,
+        "height": 768,
+        "generationType": 10,
+        "mediaWidth": null,
+        "mediaHeight": null,
+        "snap": false
+      },
+      "expected": {
+        "result": {
+          "width": 512,
+          "height": 768
+        }
+      }
+    },
+    {
+      "id": "087-set-type-dims-background-portrait-to-landscape",
+      "kind": "set-type-dims",
+      "args": {
+        "width": 832,
+        "height": 1216,
+        "generationType": 7,
+        "mediaWidth": null,
+        "mediaHeight": null,
+        "snap": false
+      },
+      "expected": {
+        "result": {
+          "width": 2176,
+          "height": 1216
+        }
+      }
+    },
+    {
+      "id": "088-set-type-dims-media-attachment-override",
+      "kind": "set-type-dims",
+      "args": {
+        "width": 1024,
+        "height": 1024,
+        "generationType": 5,
+        "mediaWidth": 600,
+        "mediaHeight": 400,
+        "snap": false
+      },
+      "expected": {
+        "result": {
+          "width": 600,
+          "height": 400
+        }
+      }
+    },
+    {
+      "id": "089-set-type-dims-face-snap-rescale",
+      "kind": "set-type-dims",
+      "args": {
+        "width": 512,
+        "height": 512,
+        "generationType": 5,
+        "mediaWidth": null,
+        "mediaHeight": null,
+        "snap": true
+      },
+      "expected": {
+        "result": {
+          "width": 512,
+          "height": 768
+        }
+      }
+    },
+    {
+      "id": "090-set-type-dims-free-mode-noop",
+      "kind": "set-type-dims",
+      "args": {
+        "width": 512,
+        "height": 512,
+        "generationType": 6,
+        "mediaWidth": null,
+        "mediaHeight": null,
+        "snap": true
+      },
+      "expected": {
+        "result": {
+          "width": 512,
+          "height": 512
+        }
+      }
     }
   ]
 }

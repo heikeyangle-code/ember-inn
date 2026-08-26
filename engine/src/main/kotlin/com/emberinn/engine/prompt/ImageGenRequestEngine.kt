@@ -701,6 +701,120 @@ object ImageGenRequestEngine {
         return Math.pow(ratio, 0.5) * magicConstant
     }
 
+    // ---------- 分辨率预设 / snap（index.js resolutionOptions L1062-L1093、getClosestKnownResolution
+    // L585-L606、setTypeSpecificDimensions L3102-L3145）----------
+    // 差分：scripts/diff/imagegen-services-official.mjs closest-resolution / set-type-dims。
+
+    /** 官方 generationMode.FACE=5 / FACE_MULTIMODAL=10 / BACKGROUND=7（index.js L118-L126）。 */
+    private val MODE_FACE = 5
+    private val MODE_BACKGROUND = 7
+    private val MODE_FACE_MULTIMODAL = 10
+
+    /** 官方 resolutionOptions 表（L1062-L1093），插入顺序即官方对象字面量键序。 */
+    val RESOLUTION_OPTIONS: List<Pair<String, Pair<Int, Int>>> = listOf(
+        "sd_res_512x512" to Pair(512, 512),
+        "sd_res_600x600" to Pair(600, 600),
+        "sd_res_512x768" to Pair(512, 768),
+        "sd_res_768x512" to Pair(768, 512),
+        "sd_res_960x540" to Pair(960, 540),
+        "sd_res_540x960" to Pair(540, 960),
+        "sd_res_1920x1088" to Pair(1920, 1088),
+        "sd_res_1088x1920" to Pair(1088, 1920),
+        "sd_res_1280x720" to Pair(1280, 720),
+        "sd_res_720x1280" to Pair(720, 1280),
+        "sd_res_1024x1024" to Pair(1024, 1024),
+        "sd_res_1152x896" to Pair(1152, 896),
+        "sd_res_896x1152" to Pair(896, 1152),
+        "sd_res_1216x832" to Pair(1216, 832),
+        "sd_res_832x1216" to Pair(832, 1216),
+        "sd_res_1344x768" to Pair(1344, 768),
+        "sd_res_768x1344" to Pair(768, 1344),
+        "sd_res_1536x640" to Pair(1536, 640),
+        "sd_res_640x1536" to Pair(640, 1536),
+        "sd_res_1536x1024" to Pair(1536, 1024),
+        "sd_res_1024x1536" to Pair(1024, 1536),
+        "sd_res_1024x1792" to Pair(1024, 1792),
+        "sd_res_1792x1024" to Pair(1792, 1024),
+        "sd_res_1280x1280" to Pair(1280, 1280),
+        "sd_res_1568x1056" to Pair(1568, 1056),
+        "sd_res_1056x1568" to Pair(1056, 1568),
+        "sd_res_1472x1088" to Pair(1472, 1088),
+        "sd_res_1088x1472" to Pair(1088, 1472),
+        "sd_res_1728x960" to Pair(1728, 960),
+        "sd_res_960x1728" to Pair(960, 1728),
+    )
+
+    private val resolutionOptionMap: Map<String, Pair<Int, Int>> = RESOLUTION_OPTIONS.toMap()
+
+    /**
+     * 官方 getClosestKnownResolution（L585-L606 1:1）：aspectDiff+resolutionDiff 总差最小者；
+     * 严格小于保证并列时取表序靠前者（与 JS Object.entries 插入序一致）。
+     */
+    fun getClosestKnownResolution(width: Int, height: Int): String? {
+        var resolutionId: String? = null
+        var minTotalDiff = Double.POSITIVE_INFINITY
+        val targetAspect = width.toDouble() / height
+        val targetResolution = width.toDouble() * height
+        for ((id, r) in RESOLUTION_OPTIONS) {
+            val aspectDiff = Math.abs(r.width.toDouble() / r.height - targetAspect) / targetAspect
+            val resolutionDiff = Math.abs((r.width.toDouble() * r.height) - targetResolution) / targetResolution
+            val totalDiff = aspectDiff + resolutionDiff
+            if (totalDiff < minTotalDiff) {
+                minTotalDiff = totalDiff
+                resolutionId = id
+            }
+        }
+        return resolutionId
+    }
+
+    /**
+     * 官方 setTypeSpecificDimensions（L3102-L3145 1:1，纯逻辑部分；返回调整后的 (width,height)，
+     * 官方另把 prev 值交调用方事后还原——App 由调用方暂存原值实现）。优先级：
+     * ① mediaAttachment 整数尺寸直接采用；② FACE/FACE_MULTIMODAL 且 aspect>=1 → height=w*1.5 取整64；
+     * ③ BACKGROUND 且 aspect<=1 → width=h*1.8 取整64；snap 开且像素数变化 → 按像素比缩放取整64 后
+     * 吸附到 [getClosestKnownResolution] 命中项（未命中保持自定义尺寸，官方 console.warn 路径）。
+     */
+    fun setTypeSpecificDimensions(
+        width: Int,
+        height: Int,
+        generationType: Int,
+        mediaWidth: Int?,
+        mediaHeight: Int?,
+        snap: Boolean,
+    ): Pair<Int, Int> {
+        val prevPixelCountBase = width.toLong() * height
+        var w = width
+        var h = height
+        val aspectRatio = width.toDouble() / height
+        when {
+            mediaWidth != null && mediaHeight != null -> {
+                w = mediaWidth
+                h = mediaHeight
+            }
+            (generationType == MODE_FACE || generationType == MODE_FACE_MULTIMODAL) && aspectRatio >= 1.0 -> {
+                // 就近取 64 的倍数
+                h = Math.round(w * 1.5 / 64).toInt() * 64
+            }
+            generationType == MODE_BACKGROUND && aspectRatio <= 1.0 -> {
+                w = Math.round(h * 1.8 / 64).toInt() * 64
+            }
+        }
+        if (snap) {
+            // 缩放前后像素总量大致不变
+            val newPixelCount = h.toLong() * w
+            if (prevPixelCountBase != newPixelCount) {
+                val ratio = Math.sqrt(prevPixelCountBase.toDouble() / newPixelCount)
+                h = Math.round(h * ratio / 64).toInt() * 64
+                w = Math.round(w * ratio / 64).toInt() * 64
+                resolutionOptionMap[getClosestKnownResolution(w, h)]?.let { r ->
+                    h = r.second
+                    w = r.first
+                }
+            }
+        }
+        return Pair(w, h)
+    }
+
     // ---------- helpers ----------
 
     /** JSON.stringify 数字语义：整数值不带小数点（7.0 → 7）。 */

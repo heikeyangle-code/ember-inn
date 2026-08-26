@@ -986,5 +986,105 @@ add('drawthings-denoising-integer-one', 'drawthings-body',
     drawthingsArgs('x', '', 'DDIM', 20, 7, 512, 512, false, false, 1.0, 1, 1.0, 7),
     { result: drawthingsBody('x', '', 'DDIM', 20, 7, 512, 512, false, false, 1.0, 1, 1.0, 7) });
 
+// ============ 分辨率预设 / snap（resolutionOptions L1062-L1093、getClosestKnownResolution
+// L585-L606、setTypeSpecificDimensions L3102-L3145）============
+const RESOLUTION_OPTIONS = {
+    sd_res_512x512: [512, 512],
+    sd_res_600x600: [600, 600],
+    sd_res_512x768: [512, 768],
+    sd_res_768x512: [768, 512],
+    sd_res_960x540: [960, 540],
+    sd_res_540x960: [540, 960],
+    sd_res_1920x1088: [1920, 1088],
+    sd_res_1088x1920: [1088, 1920],
+    sd_res_1280x720: [1280, 720],
+    sd_res_720x1280: [720, 1280],
+    sd_res_1024x1024: [1024, 1024],
+    sd_res_1152x896: [1152, 896],
+    sd_res_896x1152: [896, 1152],
+    sd_res_1216x832: [1216, 832],
+    sd_res_832x1216: [832, 1216],
+    sd_res_1344x768: [1344, 768],
+    sd_res_768x1344: [768, 1344],
+    sd_res_1536x640: [1536, 640],
+    sd_res_640x1536: [640, 1536],
+    sd_res_1536x1024: [1536, 1024],
+    sd_res_1024x1536: [1024, 1536],
+    sd_res_1024x1792: [1024, 1792],
+    sd_res_1792x1024: [1792, 1024],
+    sd_res_1280x1280: [1280, 1280],
+    sd_res_1568x1056: [1568, 1056],
+    sd_res_1056x1568: [1056, 1568],
+    sd_res_1472x1088: [1472, 1088],
+    sd_res_1088x1472: [1088, 1472],
+    sd_res_1728x960: [1728, 960],
+    sd_res_960x1728: [960, 1728],
+};
+function getClosestKnownResolution(width, height) {
+    let resolutionId = null;
+    let minTotalDiff = Infinity;
+    const targetAspect = width / height;
+    const targetResolution = width * height;
+    const diffs = Object.entries(RESOLUTION_OPTIONS).map(([id, r]) => {
+        const aspectDiff = Math.abs((r[0] / r[1]) - targetAspect) / targetAspect;
+        const resolutionDiff = Math.abs(r[0] * r[1] - targetResolution) / targetResolution;
+        return { id, totalDiff: aspectDiff + resolutionDiff };
+    });
+    for (const { id, totalDiff } of diffs) {
+        if (totalDiff < minTotalDiff) {
+            minTotalDiff = totalDiff;
+            resolutionId = id;
+        }
+    }
+    return resolutionId;
+}
+// generationType：官方 generationMode FACE=5 / FACE_MULTIMODAL=10 / BACKGROUND=7；media=null 表无附件
+function setTypeSpecificDimensions(width, height, generationType, mediaW, mediaH, snap) {
+    const prevPixelCount = width * height;
+    let w = width, h = height;
+    const aspectRatio = width / height;
+    if (Number.isInteger(mediaW) && Number.isInteger(mediaH)) {
+        w = mediaW; h = mediaH;
+    } else if ((generationType === 5 || generationType === 10) && aspectRatio >= 1) {
+        h = Math.round(w * 1.5 / 64) * 64;
+    } else if (generationType === 7 && aspectRatio <= 1) {
+        w = Math.round(h * 1.8 / 64) * 64;
+    }
+    if (snap) {
+        const newPixelCount = h * w;
+        if (prevPixelCount !== newPixelCount) {
+            const ratio = Math.sqrt(prevPixelCount / newPixelCount);
+            h = Math.round(h * ratio / 64) * 64;
+            w = Math.round(w * ratio / 64) * 64;
+            const resolution = RESOLUTION_OPTIONS[getClosestKnownResolution(w, h)];
+            if (resolution) {
+                h = resolution[1];
+                w = resolution[0];
+            }
+        }
+    }
+    return { width: w, height: h };
+}
+function addClosest(id, width, height) {
+    add(id, 'closest-resolution', { width, height }, { result: getClosestKnownResolution(width, height) });
+}
+addClosest('closest-resolution-exact-portrait-sdxl', 832, 1216);
+addClosest('closest-resolution-near-miss-landscape', 1200, 800);
+addClosest('closest-resolution-generic-square', 500, 500);
+addClosest('closest-resolution-hd-wide', 1600, 900);
+addClosest('closest-resolution-chatgpt-portrait', 1000, 1400);
+
+function addDims(id, width, height, generationType, mediaW, mediaH, snap) {
+    add(id, 'set-type-dims',
+        { width, height, generationType, mediaWidth: mediaW, mediaHeight: mediaH, snap },
+        { result: setTypeSpecificDimensions(width, height, generationType, mediaW, mediaH, snap) });
+}
+addDims('set-type-dims-face-square-to-portrait', 512, 512, 5, null, null, false);
+addDims('set-type-dims-face-already-portrait-noop', 512, 768, 10, null, null, false);
+addDims('set-type-dims-background-portrait-to-landscape', 832, 1216, 7, null, null, false);
+addDims('set-type-dims-media-attachment-override', 1024, 1024, 5, 600, 400, false);
+addDims('set-type-dims-face-snap-rescale', 512, 512, 5, null, null, true);
+addDims('set-type-dims-free-mode-noop', 512, 512, 6, null, null, true);
+
 writeFileSync(outFile, JSON.stringify({ cases }, null, 2) + '\n');
 console.log(`imagegen-services fixtures: ${cases.length} cases -> ${outFile}`);
